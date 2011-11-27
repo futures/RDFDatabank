@@ -9,7 +9,7 @@ from pylons.controllers.util import abort, redirect_to
 from pylons.decorators import rest
 from paste.fileapp import FileApp
 from rdfdatabank.lib.base import BaseController, render
-from rdfdatabank.lib.utils import create_new, is_embargoed, get_readme_text, test_rdf, munge_manifest, serialisable_stat, allowable_id2
+from rdfdatabank.lib.utils import create_new, is_embargoed, get_readme_text, test_rdf, munge_manifest, serialisable_stat, allowable_id2, get_rdf_template
 from rdfdatabank.lib.file_unpack import get_zipfiles_in_dataset
 from rdfdatabank.lib.conneg import MimeType as MT, parse as conneg_parse
 
@@ -172,7 +172,8 @@ class DatasetsController(BaseController):
             c.embargos[id] = is_embargoed(c_silo, id)
             c.parts = item.list_parts(detailed=True)
             c.manifest_pretty = item.rdf_to_string(format="pretty-xml")
-            c.manifest = item.rdf_to_string()
+            #c.manifest = item.rdf_to_string()
+            c.manifest = get_rdf_template(item.uri, id)
             c.zipfiles = get_zipfiles_in_dataset(item)
             c.readme_text = None
             #if item.isfile("README"):

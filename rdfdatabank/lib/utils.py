@@ -174,6 +174,14 @@ def get_readme_text(item, filename="README"):
     with item.get_stream(filename) as fn:
         text = fn.read().decode("utf-8")
     return u"%s\n\n%s" % (filename, text)
+    
+def get_rdf_template(item_uri, item_id):
+    g = ConjunctiveGraph(identifier=item_uri)
+    g.bind('rdf', 'http://www.w3.org/1999/02/22-rdf-syntax-ns#')
+    g.bind('dcterms', 'http://purl.org/dc/terms/')
+    g.add((URIRef(item_uri), URIRef('http://purl.org/dc/terms/identifier'), Literal(item_id)))
+    data2 = g.serialize(format='xml', encoding="utf-8") + '\n'
+    return data2
 
 def test_rdf(text):
     g = ConjunctiveGraph()
