@@ -1,19 +1,30 @@
 # -*- coding: utf-8 -*-
 <form method="POST" enctype="multipart/form-data" action="/${c.silo_name}/datasets/${c.current}">
-<label for="embargoed_${c.current}">Embargoed?</label>
 % if c.embargos:
   % if c.embargos[c.current][0] not in ['False', 'false', 0, False]:
-    <input type="checkbox" id="embargoed_${c.current}"  name="embargoed" checked="checked"/>
+    <dd><label for="embargoed_${c.current}">Embargoed?</label>
+    <input type="checkbox" id="embargoed_${c.current}"  name="embargoed" checked="checked"/></dd>
   % else:
-    <input type="checkbox" id="embargoed_${c.current}" name="embargoed"/>
+    <dd><label for="embargoed_${c.current}">Embargoed?</label>
+    <input type="checkbox" id="embargoed_${c.current}" name="embargoed"/></dd>
   % endif
-  <br />
-  <label for="embargoed_until_${c.current}">Embargoed until (date)</label>
-  <input type="text" id="embargoed_until_${c.current}" name="embargoed_until" value="${c.embargos[c.current][1]}" />
+  <dd><label for="embargoed_until_${c.current}">Embargoed until (date)</label>
+  <input type="text" id="embargoed_until_${c.current}" name="embargoed_until" value="${c.embargos[c.current][1]}" /></dd>
 % else:
-  <input type="checkbox" name="embargoed"/>
-  <input type="text" name="embargoed_until" />
+  <dd><label>Embargoed?</label>
+  <input type="checkbox" name="embargoed"/></dd>
+  <dd><label>Embargoed until (date)</label>
+  <input type="text" name="embargoed_until" /></dd>
 % endif
+<dd>Embargo state: 
+<div class="indent">True - only those logged in and with edit rights can see item. </div>
+<div class="indent">False - Anyone can GET the item and it's files.</div>
+</dd>
+<dd>Embargo date: 
+<div class="indent">Aim is for ISO8601 dates to provide embargo trigger events. Currently unused, unvalidated and unparsed.</div>
+</dd>
+<dd>
 <input type="hidden" name="embargo_change" value="true"/>
 <input type="submit" value="Change embargo"/>
+</dd>
 </form>

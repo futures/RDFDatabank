@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 % if c.zipfile:
+<dd>
 <form method="POST" action="/${c.silo_name}/items/${c.id}">
-<input type="submit" name="Unpack" value="Unpack"/>
+<dd><input type="submit" name="Unpack" value="Unpack"/>
 % if len(c.zipfile) > 50:
 <% c.disp = "...%s"%c.zipfile[-50:] %>
 <b><a href="/${c.silo_name}/datasets/${c.id}/${c.zipfile}">${c.disp}</a></b>
@@ -13,6 +14,6 @@
 % else:
 <label for="id">Id (optional): </label><input type="text" name="id"/>&nbsp;&nbsp;
 %endif
-<input type="hidden" name="filename" value="${c.zipfile}"/>
-</form>
+<input type="hidden" name="filename" value="${c.zipfile}"/></dd>
+</form></dd>
 %endif

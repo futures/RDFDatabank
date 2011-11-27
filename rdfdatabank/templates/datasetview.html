@@ -67,23 +67,23 @@ user view
 <!-- RDF Manifest -->
 <dl>
 <dt>Item's RDF Manifest (Accept: most RDF mimetypes):</dt>
-<dd><pre>${c.manifest_pretty}</pre></dd>
+<dd><div id="manifest"<pre>${c.manifest_pretty}</pre></dd></div>
 </dl>
 
 <!-- DISPLAYED FOR EDITOR ONLY -->
 <!-- State Information -->
+<dl>
 % if c.editor:
-<p><a href="/${c.silo_name}/states/${c.id}">View state information</a></p>
+<div class="button"><a class="callToAction" href="/${c.silo_name}/states/${c.id}">View state information</a></div>
+</dl>
 <!-- Change Embargo Information -->
 % if c.view == 'editor':
 <dl>
 <dt>Change Embargo</dt>
-<dd>
-<%include file="/embargo_form.html"/>
-<p><small>Embargo state: True - only those logged in and with edit rights can see item. False - Anyone can GET the item and it's files.</small></p>
-<p><small>Embargo date: Aim is for ISO8601 dates to provide embargo trigger events. Currently unused, unvalidated and unparsed.</small></p>
-</dd>
+<dd><%include file="/embargo_form.html"/></dd>
+</dl>
 <!-- Change RDF Manifest -->
+<dl>
 <dt>Add metadata to the RDF Manifest</dt>
 <dd><%include file="/rdf_manifest_form.html"/></dd>
 </dl>
@@ -91,16 +91,16 @@ user view
 <%include file="/file_upload.html"/>
 <!-- Unpack zipfiles -->
 %   if c.zipfiles:
-<h2> List of item unpack endpoints:</h2>
-<ul class="unpack_endpoints">
+<dl>
+<dt> List of item unpack endpoints:</dt>
 %     for zf in c.zipfiles:
 <%
 c.zipfile = zf
 c.newid = c.zipfiles[zf]
 %>
-<li><%include file="/files_unpack.html"/></li>
+<dd><%include file="/files_unpack.html"/></dd>
 %     endfor
-</ul>
+</dl>
 %   endif
 % endif
 % endif

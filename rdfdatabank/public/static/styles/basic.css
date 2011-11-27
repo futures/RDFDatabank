@@ -665,3 +665,42 @@ a:hover.callToAction,
 a:focus.callToAction {
 	color:#99cdd1;
 }
+
+#editor_metadata_view dl {
+    padding: 5px 0px;
+    margin: 5px opx;
+}
+
+#editor_metadata_view dl dt {
+    font-size: 1.1em;
+    font-weight: bold;
+    margin: 5px 0px;
+    padding: 5px 0px;
+    border-bottom: 1px dotted #cccccc;
+}
+
+#editor_metadata_view dl dd {
+    margin-bottom: 10px;
+}
+
+#editor_metadata_view p {
+    margin: 5px opx;
+}
+
+.button {
+    margin: 10px 0px;
+}
+
+.indent {
+    margin-left: 25px;
+}
+
+#manifest {
+    max-height: 150px;
+    overflow: auto;
+}
+
+#manifest pre {
+    line-height: 15px;
+    font-size: 1.1em;
+}
