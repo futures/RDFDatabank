@@ -1,0 +1,667 @@
+
+
+body
+{
+	background-color: #fff;	
+	font-family: helvetica, arial, sans-serif;
+	font-size: 0.82em;
+	padding: 0px;
+	
+
+}
+/* use a serif font for headers, preferably Georgia */
+h1, h2, h3, h4, h5, h6
+{
+	color: #425e77;
+	font-weight: normal;
+	margin: 0.8em 0px 0.2em 0px;
+	text-transform: uppercase;
+	
+}
+
+
+h1
+{
+font-size: 1.8em;
+
+}
+
+h2
+{
+
+font-size: 1.65em;
+}
+
+h3
+{
+
+font-size: 1.5em;
+}
+
+h4
+{
+
+font-size: 1.35em;
+}
+
+h5
+{
+
+font-size: 1.2em;
+}
+
+h6
+{
+
+font-size: 1.05em;
+font-style: italic;
+font-weight: normal;
+margin: 0px;
+margin-bottom: 0.2em;
+padding: 0px;
+
+}
+
+a,
+a:link,
+a:visited,
+a:active,
+a:focus,
+a:hover
+{
+	color: #0a4361;
+}
+
+
+
+/* establish some consistant style for the main blocks */
+header.pageHeader,
+.main,
+footer.site
+{
+	background-color: #425e77;
+	color: #fff;
+	margin-bottom: 10px;
+}
+
+
+.main
+{
+	background-color: #fff;
+	color: #444;
+}
+
+label
+{
+	font-weight: bold;
+}
+
+p
+{
+	margin: 0.7em 0px;
+}
+
+.content footer
+{
+	margin: 10px 0px;
+}
+
+
+/*  hide h2's in mainnav */
+#mainnav h2,
+#subnav h2
+{
+	position: absolute;
+	top: -1000px;
+}
+
+
+
+header.pageHeader {
+
+	background: #425e77; /* for non-css3 browsers */
+		filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#425e77', endColorstr='#609494'); /* for IE */
+		background: -webkit-gradient(linear, left top, left bottom, from(#425e77), to(#609494)); /* for webkit browsers */
+		background: -moz-linear-gradient(top,  #425e77,  #609494); /* for firefox 3.6+ */ 
+	border-top: 1px solid #425e77;
+	color:#fff;
+	margin: 0px;
+	padding: 0px;
+	position: relative;
+}
+
+
+header.pageHeader a
+{
+	color: #fff;
+}
+
+header.pageHeader h1
+{
+	background-color: transparent;
+	font-size: 5.5555em;
+	font-weight: bold;
+	letter-spacing: -0.16em;
+	margin: -10px 0px -10px -7px;
+	padding: 0px;
+
+}
+
+header.pageHeader h1 a,
+header.pageHeader h1 a:link,
+header.pageHeader h1 a:visited,
+header.pageHeader h1 a:active
+
+{
+
+	color:#82adae;
+}
+
+header.pageHeader h1 a:hover,
+header.pageHeader h1 a:focus
+{
+	color: #fff;
+}
+
+
+
+
+header ul li,
+footer ul li
+{
+display: inline;
+padding: 2px 10px;
+font-size: 0.9em;
+
+}
+
+
+li 
+{
+list-style: none;
+}
+
+
+.content ul,
+.content ol
+{
+padding-left: 20px;
+}
+.content li 
+{
+margin: 0.6em 0px 0px 0px;
+}
+
+
+.content ol li 
+{
+list-style: disc;
+}
+
+.content ol li
+{
+list-style: decimal;
+}
+
+
+
+
+/* breadcrumb styles */
+
+.breadcrumb ul li
+{
+display: inline;
+}
+
+.breadcrumb .youarehere
+{
+font-weight: bold;
+}
+
+
+a
+{
+text-decoration: none;
+}
+
+
+.main a
+{
+text-decoration: underline;
+}
+
+.clear
+{
+clear: both;
+}
+
+
+
+.name
+{
+
+font-weight: bold;
+}
+
+
+/* currentActions */
+
+.currentActions ul li
+{
+display: inline;
+}
+
+
+
+/* browse styles */
+
+
+
+
+
+/* general table styles */
+
+
+table
+{
+word-wrap: break-word;
+margin: 10px 0px;
+}
+
+
+
+table th,
+table td
+{
+background-color: #fff;
+border: 1px solid #eee;
+margin: 3px;
+padding: 4px;
+
+word-wrap: break-word;
+
+}
+
+
+table th
+{
+  background: #425e77; /* for non-css3 browsers */
+		filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#425e77', endColorstr='#609494'); /* for IE */
+		background: -webkit-gradient(linear, left top, left bottom, from(#425e77), to(#609494)); /* for webkit browsers */
+		background: -moz-linear-gradient(top,  #425e77,  #609494); /* for firefox 3.6+ */ 
+
+  color: #fff;
+  font-weight: bold;
+}
+
+
+/* enforce max-width on the browse table cells */
+table.browse td
+{
+
+
+
+}
+
+
+
+/*  system messgae styles */
+
+.message {
+
+background-color: #666;
+border-bottom: 10px solid #999;
+color: #fff;
+padding: 5px;
+margin-bottom: 5px;
+}
+/* good (green is good) */
+
+.success{
+background-color: #2a2;
+border-color: #6c6;
+}
+/* bad (red is baaaaaad) */
+.error {
+background-color: #a22;
+border-color: #c66;
+}
+
+/* are you sure? (blue is cool on the subject..) */
+
+.confirm {
+background-color: #22a;
+border-color: #66c;
+}
+
+
+.message a
+{
+color: #fff;
+}
+
+
+.message ul li
+{
+list-style: none;
+display: inline;
+}
+
+
+/* breadcrumb */
+
+.breadcrumb
+{
+
+}
+
+
+ul.breadcrumb 
+{
+display: inline;
+}
+
+ul.breadcrumb  li a
+{
+background: transparent url('images/icons/breadcrumb-arrow.png') no-repeat center right; 
+padding-right: 12px;
+}
+
+/* action links */
+.main a.action,
+a.action
+{
+	  background: #425e77; /* for non-css3 browsers */
+		filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#425e77', endColorstr='#609494'); /* for IE */
+		background: -webkit-gradient(linear, left top, left bottom, from(#425e77), to(#609494)); /* for webkit browsers */
+		background: -moz-linear-gradient(top,  #425e77,  #609494); /* for firefox 3.6+ */ 
+		
+	box-shadow: #ccc 0.1em 0.1em 0.1em; /* Opera 10.5, IE 9.0 */
+		-webkit-box-shadow: #ccc 0.1em 0.1em 0.1em; /* Chrome Safari */
+		-moz-box-shadow: #ccc 0.1em 0.1em 0.1em; /* Firefox F3.5+ */
+		
+	color: #fff;
+	font-size: 0.9em;
+	line-height: 1.7em;
+	padding: 3px 5px;
+	text-decoration: none;	 
+	text-transform: uppercase;
+
+
+}
+
+
+.main a.action:hover,
+.main a.action:focus,
+a.action:hover,
+a.action:focus
+{
+	background-color: #fff;
+	color: #425e77;
+}
+
+
+
+/* form styling */
+
+
+form
+{
+margin: 1em;
+}
+
+form label
+{
+display: block;
+width: 10em;
+float: left;
+text-align: right;
+margin-right: 5px; 
+}
+
+ label 
+{
+padding: 0px 2px 15px 5px;
+text-transform: uppercase;
+}
+
+form div,
+form fieldset,
+div.summary div
+{
+
+max-width: 25em;
+clear: both;
+margin: 5px;
+}
+
+
+
+div.textarea label,
+form div.textareaOutput,
+div#receipt div.textareaOutput,
+textarea
+{
+border: 1px solid #ccc;
+display: block;
+margin: 0px;
+max-width: none;
+padding: 3px;
+text-align: left;
+width: 100%;
+}
+
+ div.textarea label
+{
+background-color: #eee;
+border-bottom-style: none;
+text-align: center;
+}
+
+fieldset
+{
+padding: 10px;
+margin: 10px;
+border: 1px dotted #ccc; 
+
+}
+
+legend
+{
+font-weight: bold;
+}
+
+
+form .radio  label
+{
+display: inline !important;
+width: auto;
+float: none;
+
+}
+
+
+/* submission */
+
+
+.confirmSubmit 
+{
+margin-top: 20px;
+}
+
+
+
+/* navigation */
+
+
+nav  {
+	background-color: #fff;
+	border: 1px solid #dfe2e4;
+	border-top-style: none;
+	padding-bottom: 7px;
+}
+
+nav label
+{
+color: #000;
+position: absolute;
+top: -9000px;
+}
+
+
+
+header.pageHeader nav a {
+	color: #425e77;
+
+}
+
+#mainnav {
+	
+	margin-bottom: 0px;
+	padding: 3px 0px;
+}
+
+#mainnav a,
+#mainnav span
+
+{
+    border: 1px solid #fff;
+    border-top: 3px solid #fff;
+	color: #425e77;
+	font-size: 1.3em;
+	line-height: 2em;
+	padding: 6px 7px 2px 7px;
+	text-decoration: none;	 
+
+
+}
+
+
+#mainnav a:hover,
+#mainnav a:focus,
+#mainnav span
+{
+	 border: 1px solid #eee;
+	 border-top: 3px solid #425e77;
+}
+
+
+#mainnav span
+{
+	-webkit-box-shadow: #ccc 0.2em 0.2em 0.2em; /* Chrome Safari */
+	-moz-box-shadow: #ccc 0.2em 0.2em 0.2em; /* Firefox F3.5+ */
+	 box-shadow: #ccc 0.2em 0.2em 0.2em; /* Opera 10.5, IE 9.0 */
+	 border-top: 3px solid #425e77;
+}
+
+#subnav {
+
+border-top: 1px solid #eee;
+margin-top: 5px;
+padding: 0px;
+}
+
+
+#subnav ul {
+padding-top: 7px;
+}
+
+
+
+footer.site
+{
+  background: #425e77; /* for non-css3 browsers */
+		filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#425e77', endColorstr='#609494'); /* for IE */
+		background: -webkit-gradient(linear, left top, left bottom, from(#425e77), to(#609494)); /* for webkit browsers */
+		background: -moz-linear-gradient(top,  #425e77,  #609494); /* for firefox 3.6+ */ 
+
+  font-size: 0.9em;
+  padding: 10px;
+  text-align: center;
+}
+
+footer.site a
+{
+color: #fff;
+
+}
+
+
+.intro,
+.pleaseNote,
+.message{
+  background: #fdfefe; /* for non-css3 browsers */
+		filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#fdfefe', endColorstr='#f4f7fa'); /* for IE */
+		background: -webkit-gradient(linear, left top, left bottom, from(#fdfefe), to(#f4f7fa)); /* for webkit browsers */
+		background: -moz-linear-gradient(top,  #fdfefe,  #f4f7fa); /* for firefox 3.6+ */ 
+	border: 1px solid #dfe2e4;
+  	-moz-border-radius: 5px; /* Firefox */
+  	-webkit-border-radius: 5px; /* Safari, Chrome */
+  	border-radius: 5px; /* CSS3 */
+  	clear: both;
+  	margin: 0px 0px 15px 0px;
+  	padding: 5px;
+
+}
+
+.message {
+
+
+}
+
+.intro {
+
+font-weight: bold;
+}
+
+
+.create-silo form  {
+border: 1px solid #eee;
+padding: 5px;
+}
+
+.create-silo form label {
+
+
+
+}
+
+.create-silo form li {
+clear: both;
+line-height: 2em;
+
+}
+
+.bigUp {
+ 
+ 	font-size: 2em;
+ 	text-align: center;
+}
+
+a:link.callToAction,
+a:visited.callToAction,
+a:active.callToAction,
+a:hover.callToAction,
+a:focus.callToAction{
+
+background: #425e77; /* for non-css3 browsers */
+		filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#425e77', endColorstr='#609494'); /* for IE */
+		background: -webkit-gradient(linear, left top, left bottom, from(#425e77), to(#609494)); /* for webkit browsers */
+		background: -moz-linear-gradient(top,  #425e77,  #609494); /* for firefox 3.6+ */ 
+	border-top: 1px solid #425e77;
+	box-shadow: #b9c8d5 0.3em 0.3em 0.2em; /* Opera 10.5, IE 9.0 */
+	 	-webkit-box-shadow: #b9c8d5 0.3em 0.3em 0.2em; /* Chrome Safari */
+		-moz-box-shadow: #b9c8d5 0.3em 0.3em 0.2em; /* Firefox F3.5+ */
+	clear: both;
+	color:#fff;
+	margin: 10px 0px;
+	padding: 5px;
+	text-decoration: none;
+
+	
+}
+
+a:hover.callToAction,
+a:focus.callToAction {
+	color:#99cdd1;
+}

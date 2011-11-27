@@ -32,11 +32,15 @@ def make_map():
     map.connect('/api/{api_name}', controller='api', action='apiview')
    
     map.connect('/admin', controller='admin', action='index')
-    map.connect('/{silo_name}/admin', controller='admin', action='archive')
-    map.connect('/{silo_name}/register', controller='admin', action='register')
+    map.connect('/keywords', controller='keywords', action='index')
+    map.connect('/about', controller='about', action='index')
+    map.connect('/searching', controller='searching', action='index')
     
     map.connect('/silos', controller='silos', action='index')
     map.connect('/{silo}', controller='silos', action='siloview')
+
+    map.connect('/{silo_name}/admin', controller='admin', action='archive')
+    map.connect('/{silo_name}/register', controller='admin', action='register')
 
     map.connect('/{silo}/datasets', controller='datasets', action='siloview')
     map.connect('/{silo}/datasets/{id}', controller='datasets', action='datasetview')
@@ -59,5 +63,8 @@ def make_map():
     map.connect('/{controller}')
     map.connect('/{controller}/{action}')
     map.connect('/{controller}/{action}/{id}')
+    
+    
+
 
     return map

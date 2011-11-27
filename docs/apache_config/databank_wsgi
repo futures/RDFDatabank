@@ -2,17 +2,17 @@
     ServerName databank.bodleian.ox.ac.uk
 
     # Logfiles
-    ErrorLog  /opt/rdfdatabank/apachelog/error.log
-    CustomLog /opt/rdfdatabank/apachelog/access.log combined
+    ErrorLog  /var/log/apache2/databank-error.log
+    CustomLog /var/log/apache2/databank-access.log combined
  
     # Use only 1 Python sub-interpreter.  Multiple sub-interpreters
     # play badly with C extensions.
     WSGIApplicationGroup %{GLOBAL}
     WSGIPassAuthorization On
     # Setup mod_wsgi
-    WSGIScriptAlias / /opt/rdfdatabank/src/mod_wsgi/dispatch.wsgi
+    WSGIScriptAlias / /opt/RDFDatabank/mod_wsgi/dispatch.wsgi
 
-    <Directory /opt/rdfdatabank/src/mod_wsgi>
+    <Directory /opt/RDFDatabank/mod_wsgi>
     Order deny,allow
     Allow from all
     </Directory>

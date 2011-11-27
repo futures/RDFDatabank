@@ -5,9 +5,9 @@
 </%def>
 <h1> List of Silos </h1>
 % if c.silos:
-<ul>
+<ul class="silos">
 % for silo in c.silos:
-<li><a href="/${silo}"><big><big>${silo}</big></big></a><br /><ul>
+<li><a href="/${silo}">${silo}</a><ul>
 <li><a href="/${silo}/datasets">Datasets </a></li>
 </ul>
 % endfor
