@@ -3,9 +3,11 @@
 <dt> Add File to ${c.id}</dt>
 <dd>
 <form method="POST" enctype="multipart/form-data" action="/${c.silo_name}/datasets/${c.id}">
-<dd><input type="file" name="file" /> 
-<label for="filename_${c.id}">Filename: (optional)</label><input id="filename_${c.id}" type="text" name="filename"/>
-<input type="submit" value="Add File"/></dd>
+<dd>
+<input type="file" name="file" /> Filename: (optional)
+<input id="filename_${c.id}" type="text" name="filename"/>
+<input type="submit" value="Add File"/>
+</dd>
 </form>
 </dd>
 </dl>

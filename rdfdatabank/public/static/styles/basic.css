@@ -669,6 +669,7 @@ a:focus.callToAction {
 #editor_metadata_view dl {
     padding: 5px 0px;
     margin: 5px opx;
+    clear: both;
 }
 
 #editor_metadata_view dl dt {
@@ -677,10 +678,12 @@ a:focus.callToAction {
     margin: 5px 0px;
     padding: 5px 0px;
     border-bottom: 1px dotted #cccccc;
+    clear: both;
 }
 
 #editor_metadata_view dl dd {
     margin-bottom: 10px;
+    clear: both;
 }
 
 #editor_metadata_view p {
