@@ -156,6 +156,11 @@ IV. Create the main admin user to access Databank
 Create a file 'passwd' in the root directory of RDFDatabank using 'htpasswd' and add a user to the passwd file.
 OR copy the file passwd-default to passwd
 
+The passwd-default file has two users whose username, password are as given below. 
+    admin, test
+    sandbox_user, sandbox
+Please note, these user accounts are just for demonstration and would have to be changed for a production instance.
+
 To create the pssswd file
     cd RDFDatabank/
     htpasswd -c passwd admin
