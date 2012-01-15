@@ -1,4 +1,4 @@
-from rdfdatabank.config.users import _USERS as _DATA
+from rdfdatabank.config.usersdefault import _USERS as _DATA
 
 class IdentMDProvider(object):
 
