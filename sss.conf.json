@@ -1,7 +1,7 @@
 
 {
     # The base url of the webservice where SSS is deployed
-    "base_url" : "http://localhost:5000/",
+    "base_url" : "http://localhost:5000/swordv2/",
     # if you are using Apache, you should probably use this base_url instead
     # "base_url" : "http://localhost/sss/",
     

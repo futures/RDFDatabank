@@ -1,4 +1,6 @@
-from sss import SwordServer, Authenticator
+from sss import SwordServer, Authenticator, Auth, ServiceDocument
+
+from pylons import app_globals as ag
 
 class SwordDataBank(SwordServer):
     """
@@ -7,8 +9,10 @@ class SwordDataBank(SwordServer):
     """
     def __init__(self, config, auth):
         # get the configuration
-        self.configuration = config
+        self.config = config
         self.auth_credentials = auth
+        
+        self.um = URLManager(config)
 
     def container_exists(self, path):
         raise NotImplementedError()
@@ -21,7 +25,79 @@ class SwordDataBank(SwordServer):
         Construct the Service Document.  This takes the set of collections that are in the store, and places them in
         an Atom Service document as the individual entries
         """
-        raise NotImplementedError()
+        service = ServiceDocument(version=self.config.sword_version,
+                                    max_upload_size=self.config.max_upload_size)
+        
+        # FIXME: at the moment, there is not authentication, so this is the
+        # full list of silos
+        
+        # now for each collection create an sdcollection
+        collections = []
+        for col_name in ag.granary.silos:
+            href = self.um.silo_url(col_name)
+            title = col_name
+            mediation = self.config.mediation
+            
+            # content types accepted
+            accept = []
+            multipart_accept = []
+            if not self.config.accept_nothing:
+                if self.config.app_accept is not None:
+                    for acc in self.config.app_accept:
+                        accept.append(acc)
+                
+                if self.config.multipart_accept is not None:
+                    for acc in self.config.multipart_accept:
+                        multipart_accept.append(acc)
+                        
+            # SWORD packaging formats accepted
+            accept_package = []
+            for format in self.config.sword_accept_package:
+                accept_package.append(format)
+            
+            col = SDCollection(href=href, title=title, accept=accept, multipart_accept=multipart_accept,
+                                accept_package=accept_package, mediation=mediation)
+                                
+            collections.append(col)
+        
+        service.add_workspace("Silos", collections)
+
+        # serialise and return
+        return service.serialise()
+        
+        """
+        This is our reference for the service document - a list of silos appropriate to the user
+        def authz(granary_list,ident):
+            g = ag.granary
+            g.state.revert()
+            g._register_silos()
+            granary_list = g.silos
+            def _parse_owners(silo_name):
+                kw = g.describe_silo(silo_name)
+                if "owners" in kw.keys():
+                    owners = [x.strip() for x in kw['owners'].split(",") if x]
+                    return owners
+                else:
+                    return []
+            #For auth, the code is looking at the list of owners against each silo and not looking at the owner list against each user. A '*' here is meaningless.
+            #TODO: Modify code to look at both and keep both silo owner and silos a user has acces to in users.py in sunc and use both
+            if ident['role'] == "admin":
+                authd = []
+                for item in granary_list:
+                    owners = _parse_owners(item)
+                    if '*' in owners:
+                        return granary_list
+                    if ident['repoze.who.userid'] in owners:
+                        authd.append(item)
+                return authd
+            else:
+                authd = []
+                for item in granary_list:
+                    owners = _parse_owners(item)
+                    if ident['repoze.who.userid'] in owners:
+                        authd.append(item)
+                return authd
+        """
 
     def list_collection(self, path):
         """
@@ -131,6 +207,13 @@ class DataBankAuthenticator(Authenticator):
         self.config = config
         
     def basic_authenticate(self, username, password, obo):
-        raise NotImplementedError()
         # FIXME: we're going to implement a very weak authentication mechanism
         # for the time being
+        return Auth(username, obo)
+        
+class URLManager(object):
+    def __init__(self, config):
+        self.config = config
+        
+    def silo_url(self, silo):
+        return self.config.base_url + silo
