@@ -50,7 +50,9 @@ def make_app(global_conf, full_stack=True, static_files=True, **app_conf):
     app = SessionMiddleware(app, config)
     app = CacheMiddleware(app, config)
 
-
+    # FIXME: we need to figure out how to correctly configure this for SWORD support, 
+    # which will need to bypass the custom error pages in some cases
+    
     # CUSTOM MIDDLEWARE HERE (filtered by error handling middlewares)
     if asbool(full_stack):
         # Handle Python exceptions

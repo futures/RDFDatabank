@@ -21,6 +21,7 @@ solrpy
 
 redis (use the redis client that is compatible with your redis server - http://github.com/andymccurdy/redis-py/)
 
+sss - Simple Sword Server 2.0; can be obtained from http://sword-app.svn.sourceforge.net/viewvc/sword-app/sss/branches/sss-2/
 
 -  Change the settings in development.ini to suit your uses, specifically:
 
