@@ -49,7 +49,7 @@
     "sword_accept_package" : [
             "http://purl.org/net/sword/package/SimpleZip",
             "http://purl.org/net/sword/package/Binary",
-            "http://purl.org/net/sword/package/METSDSpaceSIP"
+            "http://dataflow.ox.ac.uk/package/DataBankBagIt"
         ],
     
     # FIXME: what is the max upload size for databank?  Is it unlimited?

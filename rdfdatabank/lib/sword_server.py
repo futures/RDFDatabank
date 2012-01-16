@@ -1,4 +1,4 @@
-from sss import SwordServer, Authenticator, Auth, ServiceDocument
+from sss import SwordServer, Authenticator, Auth, ServiceDocument, SDCollection
 
 from pylons import app_globals as ag
 
