@@ -1,6 +1,9 @@
-from sss import SwordServer, Authenticator, Auth, ServiceDocument, SDCollection
+from rdfdatabank.lib.utils import allowable_id2, create_new
+from sss import SwordServer, Authenticator, Auth, ServiceDocument, SDCollection, DepositResponse, SwordError, EntryDocument
 
 from pylons import app_globals as ag
+
+import uuid
 
 class SwordDataBank(SwordServer):
     """
@@ -105,7 +108,7 @@ class SwordDataBank(SwordServer):
         """
         raise NotImplementedError()
 
-    def deposit_new(self, path, deposit):
+    def deposit_new(self, silo, deposit):
         """
         Take the supplied deposit and treat it as a new container with content to be created in the specified collection
         Args:
@@ -113,7 +116,174 @@ class SwordDataBank(SwordServer):
         -deposit:       the DepositRequest object to be processed
         Returns a DepositResponse object which will contain the Deposit Receipt or a SWORD Error
         """
-        raise NotImplementedError()
+        # FIXME: where should we check MD5 checksums?  Could be costly to do this
+        # inline with large files
+        
+        # FIXME: do we care if an On-Behalf-Of deposit is made, but mediation is
+        # turned off?  And should this be pushed up to the pylons layer?
+
+        # get the list of silos
+        silos = ag.granary.silos
+        
+        # FIXME: get the auth list of silos
+        # silos = ag.authz(granary_list, ident)
+        
+        # does the collection/silo exist?  If not, we can't do a deposit
+        if silo not in silos:
+            # FIXME: if it exists, but we can't deposit, we need to 403
+            raise SwordError(status=404, empty=True)
+
+        # get a full silo object
+        rdf_silo = ag.granary.get_rdf_silo(silo)
+
+        # weed out unacceptable deposits
+        if deposit.slug is None:
+            deposit.slug = str(uuid.uuid4())
+        if rdf_silo.exists(deposit.slug):
+            raise SwordError(error_uri=DataBankErrors.dataset_conflict, msg="A Dataset with the name " + deposit.slug + " already exists")
+        if not allowable_id2(deposit.slug):
+            raise SwordError(error_uri=Errors.bad_request, msg="Dataset name can contain only the following characters - " + 
+                                                                ag.naming_rule + " and has to be more than 1 character")
+        
+        # FIXME: we need to extract from the deposit itself the metadata that the item needs
+        # and to put them into the params (which is currently an empty dict)
+        
+        # FIXME: creator needs to be passed in from ident - currently passing empty string
+        item = create_new(rdf_silo, deposit.slug, "", {})
+        
+        # FIXME: username involved here too
+        # Broadcast change as message
+        ag.b.creation(silo, deposit.slug, ident="")
+
+        # FIXME: probably use the entry ingester to generate the metadata dictionary to pass to create_new
+        # store the incoming atom document if necessary
+        #if deposit.atom is not None:
+        #    entry_ingester = self.configuration.get_entry_ingester()(self.dao)
+        #    entry_ingester.ingest(collection, id, deposit.atom)
+
+        # NOTE: left in for reference for the time being, but deposit_new 
+        # only support entry only deposits in databank.  This will need to be
+        # re-introduced for full sword support
+        # store the content file if one exists, and do some processing on it
+        #deposit_uri = None
+        #derived_resource_uris = []
+        #if deposit.content is not None:
+        
+       #     if deposit.filename is None:
+       #         deposit.filename = "unnamed.file"
+       #     fn = self.dao.store_content(collection, id, deposit.content, deposit.filename)
+
+            # now that we have stored the atom and the content, we can invoke a package ingester over the top to extract
+            # all the metadata and any files we want
+            
+            # FIXME: because the deposit interpreter doesn't deal with multipart properly
+            # we don't get the correct packaging format here if the package is anything
+            # other than Binary
+       #     ssslog.info("attempting to load ingest packager for format " + str(deposit.packaging))
+       #     packager = self.configuration.get_package_ingester(deposit.packaging)(self.dao)
+       #     derived_resources = packager.ingest(collection, id, fn, deposit.metadata_relevant)
+
+            # An identifier which will resolve to the package just deposited
+       #     deposit_uri = self.um.part_uri(collection, id, fn)
+            
+            # a list of identifiers which will resolve to the derived resources
+       #     derived_resource_uris = self.get_derived_resource_uris(collection, id, derived_resources)
+
+        # the aggregation uri
+        #agg_uri = self.um.agg_uri(collection, id)
+
+        # the Edit-URI
+        #edit_uri = self.um.edit_uri(collection, id)
+
+        # create the initial statement
+        #s = Statement()
+        #s.aggregation_uri = agg_uri
+        #s.rem_uri = edit_uri
+        #by = deposit.auth.by if deposit.auth is not None else None
+        #obo = deposit.auth.obo if deposit.auth is not None else None
+        #if deposit_uri is not None:
+        #    s.original_deposit(deposit_uri, datetime.now(), deposit.packaging, by, obo)
+        #s.in_progress = deposit.in_progress
+        #s.aggregates = derived_resource_uris
+
+        # store the statement by itself
+        #self.dao.store_statement(collection, id, s)
+
+        # create the basic deposit receipt (which involves getting hold of the item's metadata first if it exists)
+        #entry_disseminator = self.configuration.get_entry_disseminator()()
+        #dc_metadata, other_metadata = entry_disseminator.disseminate(item)
+        
+        receipt = self.deposit_receipt(silo, deposit.slug, item, "created new item")
+
+        # FIXME: while we don't have full text deposit, we don't need to augment
+        # the deposit receipt
+        
+        # now augment the receipt with the details of this particular deposit
+        # this handles None arguments, and converts the xml receipt into a string
+        # receipt = self.augmented_receipt(receipt, deposit_uri, derived_resource_uris)
+        
+        # finally, assemble the deposit response and return
+        dr = DepositResponse()
+        dr.receipt = receipt.serialise()
+        dr.location = receipt.edit_uri
+        
+        return dr
+
+        """
+        This is our reference for deposit_new ...
+        
+        params = request.POST
+            if params.has_key("id"):
+                if c_silo.exists(params['id']):
+                    response.content_type = "text/plain"
+                    response.status_int = 409
+                    response.status = "409 Conflict: Dataset Already Exists"
+                    return "Dataset Already Exists"
+                else:
+                    # Supported params:
+                    # id, title, embargoed, embargoed_until, embargo_days_from_now
+                    id = params['id']
+                    if not allowable_id2(id):
+                        response.content_type = "text/plain"
+                        response.status_int = 403
+                        response.status = "403 Forbidden"
+                        return "Dataset name can contain only the following characters - %s and has to be more than 1 character"%ag.naming_rule
+                    del params['id']
+                    item = create_new(c_silo, id, ident['repoze.who.userid'], **params)
+                    
+                    # Broadcast change as message
+                    ag.b.creation(silo, id, ident=ident['repoze.who.userid'])
+                    
+                    # conneg return
+                    accept_list = None
+                    if 'HTTP_ACCEPT' in request.environ:
+                        try:
+                            accept_list = conneg_parse(request.environ['HTTP_ACCEPT'])
+                        except:
+                            accept_list= [MT("text", "html")]
+                    if not accept_list:
+                        accept_list= [MT("text", "html")]
+                    mimetype = accept_list.pop(0)
+                    while(mimetype):
+                        if str(mimetype).lower() in ["text/html", "text/xhtml"]:
+                            redirect_to(controller="datasets", action="datasetview", silo=silo, id=id)
+                        elif str(mimetype).lower() in ["text/plain", "application/json"]:
+                            response.content_type = "text/plain"
+                            response.status_int = 201
+                            response.status = "201 Created"
+                            response.headers["Content-Location"] = url(controller="datasets", action="datasetview", silo=silo, id=id)
+                            return "201 Created"
+                        try:
+                            mimetype = accept_list.pop(0)
+                        except IndexError:
+                            mimetype = None
+                    # Whoops - nothing satisfies - return text/plain
+                    response.content_type = "text/plain"
+                    response.status_int = 201
+                    response.headers["Content-Location"] = url(controller="datasets", action="datasetview", silo=silo, id=id)
+                    response.status = "201 Created"
+                    return "201 Created"
+        """
 
     def get_media_resource(self, path, accept_parameters):
         """
@@ -201,6 +371,67 @@ class SwordDataBank(SwordServer):
         
     def get_edit_uri(self, path):
         raise NotImplementedError()
+        
+    def deposit_receipt(self, silo, identifier, item, treatment, verbose_description=None):
+        """
+        Construct a deposit receipt document for the provided URIs
+        Returns an EntryDocument object
+        """
+        # FIXME: we don't know what the item's API looks like yet; it's probably
+        # from somewhere within RecordSilo or Pairtree.  Suck it and see ...
+        
+        # assemble the URIs we are going to need
+        
+        # the atom entry id
+        drid = self.um.atom_id(silo, identifier)
+
+        # the Cont-URI
+        cont_uri = self.um.cont_uri(silo, identifier)
+
+        # the EM-URI 
+        em_uri = self.um.em_uri(silo, identifier)
+        em_uris = [(em_uri, None), (em_uri + ".atom", "application/atom+xml;type=feed")]
+
+        # the Edit-URI and SE-IRI
+        edit_uri = self.um.edit_uri(silo, identifier)
+        se_uri = edit_uri
+
+        # the splash page URI
+        splash_uri = self.um.html_url(silo, identifier)
+
+        # the two statement uris
+        atom_statement_uri = self.um.state_uri(silo, identifier, "atom")
+        ore_statement_uri = self.um.state_uri(silo, identifier, "ore")
+        state_uris = [(atom_statement_uri, "application/atom+xml;type=feed"), (ore_statement_uri, "application/rdf+xml")]
+
+        # ensure that there is a metadata object, and that it is populated with enough information to build the
+        # deposit receipt
+        dc_metadata, other_metadata = self.extract_metadata(item)
+        if dc_metadata is None:
+            dc_metadata = {}
+        if not dc_metadata.has_key("title"):
+            dc_metadata["title"] = ["SWORD Deposit"]
+        if not dc_metadata.has_key("creator"):
+            dc_metadata["creator"] = ["SWORD Client"]
+        if not dc_metadata.has_key("abstract"):
+            dc_metadata["abstract"] = ["Content deposited with SWORD client"]
+
+        packaging = []
+        for disseminator in self.config.sword_disseminate_package:
+            packaging.append(disseminator)
+
+        # Now assemble the deposit receipt
+        dr = EntryDocument(atom_id=drid, alternate_uri=splash_uri, content_uri=cont_uri,
+                            edit_uri=edit_uri, se_uri=se_uri, em_uris=em_uris,
+                            packaging=packaging, state_uris=state_uris, dc_metadata=dc_metadata,
+                            verbose_description=verbose_description, treatment=treatment)
+
+        return dr
+        
+    # FIXME: we need to work directly with the RecordSilo code to extract metadata
+    # from the item's rdf graph
+    def extract_metadata(self, item):
+        return {}, {}
     
 class DataBankAuthenticator(Authenticator):
     def __init__(self, config): 
@@ -211,9 +442,40 @@ class DataBankAuthenticator(Authenticator):
         # for the time being
         return Auth(username, obo)
         
+# FIXME: we need to discuss with the team a good URL space      
 class URLManager(object):
     def __init__(self, config):
         self.config = config
         
     def silo_url(self, silo):
-        return self.config.base_url + silo
+        return self.config.base_url + "silo/" + silo
+        
+    def atom_id(self, silo, identifier):
+        # FIXME: this is made up, is there something better?
+        return "tag:container@databank/" + silo + "/" + identifier
+        
+    def cont_uri(self, silo, identifier):
+        return self.config.base_url + "content/" + silo + "/" + identifier
+        
+    def em_uri(self, silo, identifier):
+        """ The EM-URI """
+        return self.config.base_url + "edit-media/" + silo + "/" + identifier
+        
+    def edit_uri(self, silo, identifier):
+        """ The Edit-URI """
+        return self.config.base_url + "edit/" + silo + "/" + identifier
+        
+    def html_url(self, silo, identifier):
+        """ The url for the HTML splash page of an object in the store """
+        # FIXME: what is this really?
+        return self.config.base_url + "html/" + silo + "/" + identifier
+    
+    def state_uri(self, silo, identifier, type):
+        root = self.config.base_url + "statement/" + silo + "/" + identifier
+        if type == "atom":
+            return root + ".atom"
+        elif type == "ore":
+            return root + ".rdf"
+        
+class DataBankErrors(object):
+    dataset_conflict = "http://databank.ox.ac.uk/errors/DatasetConflict"

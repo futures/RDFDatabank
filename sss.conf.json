@@ -53,10 +53,12 @@
         ],
     
     # FIXME: what is the max upload size for databank?  Is it unlimited?
+    # For the time being we omit the max upload size parameter, so there is
+    # no limit
     # maximum upload size to be allowed, in bytes (this default is 16Mb)
     #"max_upload_size" : 16777216,
     # used to generate errors
-    "max_upload_size" : 0,
+    # "max_upload_size" : 0,
     
     # list of package formats that SSS can provide when retrieving the Media Resource
     "sword_disseminate_package" : [
