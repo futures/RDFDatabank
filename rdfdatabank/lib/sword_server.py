@@ -23,7 +23,26 @@ class SwordDataBank(SwordServer):
         self.um = URLManager(config)
 
     def container_exists(self, path):
-        raise NotImplementedError()
+        # first thing to do is deconstruct the path into silo/dataset
+        silo, dataset_id = path.split("/", 1)
+        
+        if not ag.granary.issilo(silo):
+            return False
+
+        silos = ag.granary.silos
+        
+        # FIXME: incorporate authentication
+        #silos = ag.authz(granary_list, ident)      
+        if silo not in silos:
+            return False
+        
+        # get a full silo object
+        rdf_silo = ag.granary.get_rdf_silo(silo)
+        
+        if not rdf_silo.exists(dataset_id):
+            return False
+            
+        return True
 
     def media_resource_exists(self, path):
         raise NotImplementedError()
@@ -536,7 +555,46 @@ class SwordDataBank(SwordServer):
         -content_type   A ContentType object describing the required format
         Returns a representation of the container in the appropriate format
         """
-        raise NotImplementedError()
+        # by the time this is called, we should already know that we can return this type, so there is no need for
+        # any checking, we just get on with it
+
+        ssslog.info("Container requested in mime format: " + accept_parameters.content_type.mimetype())
+
+        # first thing to do is deconstruct the path into silo/dataset
+        silo, dataset_id = path.split("/", 1)
+        
+        if not ag.granary.issilo(silo):
+            return SwordError(status=404, empty=True)
+
+        silos = ag.granary.silos
+        
+        # FIXME: incorporate authentication
+        #silos = ag.authz(granary_list, ident)      
+        if silo not in silos:
+            # FIXME: if it exists, but we can't deposit, we need to 403
+            raise SwordError(status=404, empty=True)
+        
+        # get a full silo object
+        rdf_silo = ag.granary.get_rdf_silo(silo)
+        
+        if not rdf_silo.exists(dataset_id):
+            raise SwordError(status=404, empty=True)
+            
+        # now get the dataset object itself
+        dataset = rdf_silo.get_item(dataset_id)
+
+        # pick either the deposit receipt or the pure statement to return to the client
+        if accept_parameters.content_type.mimetype() == "application/atom+xml;type=entry":
+            receipt = self.deposit_receipt(silo, dataset_id, dataset, None)
+            return receipt.serialise()
+        # FIXME: at the moment we don't support conneg on the edit uri
+        #elif accept_parameters.content_type.mimetype() == "application/rdf+xml":
+        #    return self.dao.get_statement_content(collection, id)
+        #elif accept_parameters.content_type.mimetype() == "application/atom+xml;type=feed":
+        #    return self.dao.get_statement_feed(collection, id)
+        else:
+            ssslog.info("Requested mimetype not recognised/supported: " + accept_parameters.content_type.mimetype())
+            return None
 
     def deposit_existing(self, path, deposit):
         """
