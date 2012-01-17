@@ -94,8 +94,8 @@
     #"error_content_package" : "http://purl.org/net/sword/package/error",
     
     # we can turn off updates and deletes in order to examine the behaviour of Method Not Allowed errors
-    #"allow_update" : true,
-    #"allow_delete" : true,
+    "allow_update" : true,
+    "allow_delete" : true,
     
     # we can turn off deposit receipts, which is allowed by the specification
     "return_deposit_receipt" : true,

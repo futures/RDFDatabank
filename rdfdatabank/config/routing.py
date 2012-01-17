@@ -61,12 +61,12 @@ def make_map():
     map.connect('/{silo}/doi/{id}', controller='doi', action='datasetview')
 
     # SWORDv2 Configuration
+    # FIXME: not sure how these are going to look yet
     map.connect('/swordv2/service-document', controller="sword", action="service_document") # From which to retrieve the service document
     # map.connect('/sd-uri/{path:.*?}', controller="sword", action="service_document") # for sub-service documents
     map.connect('/swordv2/silo/{path:.*?}', controller="sword", action="collection") # Representing a Collection as listed in the service document
-    # FIXME: not sure how these are going to look yet
     #map.connect('/cont-uri/{path:.*?}', controller="sword", action="media_resource") # The URI used in atom:content@src
-    #map.connect('/em-uri/{path:.*?}', controller="sword", action="media_resource") # The URI used in atom:link@rel=edit-media
+    map.connect('/swordv2/edit-media/{path:.*?}', controller="sword", action="media_resource") # The URI used in atom:link@rel=edit-media
     #map.connect('/edit-uri/{path:.*?}', controller="sword", action="container") # The URI used in atom:link@rel=edit
     #map.connect('/state-uri/{path:.*?}', controller="sword", action="statement") # The URI used in atom:link@rel=sword:statement
 

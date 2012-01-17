@@ -3,7 +3,12 @@ from sss import SwordServer, Authenticator, Auth, ServiceDocument, SDCollection,
 
 from pylons import app_globals as ag
 
-import uuid
+import uuid, re, logging, urllib
+from datetime import datetime
+
+ssslog = logging.getLogger(__name__)
+
+JAILBREAK = re.compile("[\/]*\.\.[\/]*")
 
 class SwordDataBank(SwordServer):
     """
@@ -301,7 +306,207 @@ class SwordDataBank(SwordServer):
         - deposit:  a DepositRequest object
         Return a DepositResponse containing the Deposit Receipt or a SWORD Error
         """
-        raise NotImplementedError()
+        # FIXME: where should we check MD5 checksums?  Could be costly to do this
+        # inline with large files
+        
+        # FIXME: do we care if an On-Behalf-Of deposit is made, but mediation is
+        # turned off?  And should this be pushed up to the pylons layer?
+
+        # first thing to do is deconstruct the path into silo/dataset
+        silo, dataset_id = path.split("/", 1)
+        
+        if not ag.granary.issilo(silo):
+            return SwordError(status=404, empty=True)
+
+        silos = ag.granary.silos
+        
+        # FIXME: incorporate authentication
+        #silos = ag.authz(granary_list, ident)      
+        if silo not in silos:
+            # FIXME: if it exists, but we can't deposit, we need to 403
+            raise SwordError(status=404, empty=True)
+        
+        # get a full silo object
+        rdf_silo = ag.granary.get_rdf_silo(silo)
+        
+        if not rdf_silo.exists(dataset_id):
+            raise SwordError(status=404, empty=True)
+            
+        # now get the dataset object itself
+        dataset = rdf_silo.get_item(dataset_id)
+        
+        # deal with possible problems with the filename
+        if deposit.filename is None or deposit.filename == "":
+            raise SwordError(error_uri=Errors.bad_request, msg="You must supply a filename to unpack")
+        if JAILBREAK.search(deposit.filename) != None:
+            raise SwordError(error_uri=Errors.bad_request, msg="'..' cannot be used in the path or as a filename")
+        
+        
+        
+        # FIXME: at the moment this metadata operation is not supported by DataBank
+        # first figure out what to do about the metadata
+        keep_atom = False
+        #if deposit.atom is not None:
+        #    ssslog.info("Replace request has ATOM part - updating")
+        #    entry_ingester = self.configuration.get_entry_ingester()(self.dao)
+        #    entry_ingester.ingest(collection, id, deposit.atom)
+        #    keep_atom = True
+            
+        deposit_uri = None
+        derived_resource_uris = []
+        if deposit.content is not None:
+            ssslog.info("Replace request has file content - updating")
+            
+            # FIXME: how do we do this from DataBank - is it enough to increment the version as below?
+            
+            # remove all the old files before adding the new.  We always leave
+            # behind the metadata; this will be overwritten later if necessary
+            #self.dao.remove_content(collection, id, True, keep_atom)
+            dataset.increment_version_delta(clone_previous_version=True, copy_filenames=['manifest.rdf'])
+
+            # store the content file
+            dataset.put_stream(deposit.filename, deposit.content)
+            ssslog.debug("New incoming file stored with filename " + deposit.filename)
+            
+            
+
+            # FIXME: this doesn't happen here ... (keeping for the time being for reference)
+            
+            # now that we have stored the atom and the content, we can invoke a package ingester over the top to extract
+            # all the metadata and any files we want.  Notice that we pass in the metadata_relevant flag, so the
+            # packager won't overwrite the existing metadata if it isn't supposed to
+            #packager = self.configuration.get_package_ingester(deposit.packaging)(self.dao)
+            #derived_resources = packager.ingest(collection, id, fn, deposit.metadata_relevant)
+            #ssslog.debug("Resources derived from deposit: " + str(derived_resources))
+        
+            # a list of identifiers which will resolve to the derived resources
+            #derived_resource_uris = self.get_derived_resource_uris(collection, id, derived_resources)
+
+            # FIXME: I don't know if this is really how this should be done -
+            # need to understand more about the URL space
+            
+            # An identifier which will resolve to the package just deposited
+            deposit_uri = self.um.file_uri(silo, dataset_id, deposit.filename)
+
+        # FIXME: it feels like there's too tight a coupling in DataBank between
+        # the web layer and the business logic layer - I have to replicate stuff
+        # like this in this controller, rather than rely on some update method
+        # in the core to do it for me
+        
+        # Taken from dataset.py, seems to be the done thing when adding an item.
+        dataset.del_triple(dataset.uri, u"dcterms:modified")
+        dataset.add_triple(dataset.uri, u"dcterms:modified", datetime.now())
+        dataset.del_triple(dataset.uri, u"oxds:currentVersion")
+        dataset.add_triple(dataset.uri, u"oxds:currentVersion", dataset.currentversion)
+        dataset.sync()
+
+        # NOTE: none of this is probably needed, just leave in for reference
+        # for the time being
+        
+        # the aggregation uri
+        #agg_uri = self.um.agg_uri(collection, id)
+
+        # the Edit-URI
+        #edit_uri = self.um.edit_uri(collection, id)
+
+        # create the new statement
+        #s = Statement()
+        #s.aggregation_uri = agg_uri
+        #s.rem_uri = edit_uri
+        #if deposit_uri is not None:
+        #    by = deposit.auth.by if deposit.auth is not None else None
+        #    obo = deposit.auth.obo if deposit.auth is not None else None
+        #    s.original_deposit(deposit_uri, datetime.now(), deposit.packaging, by, obo)
+        #s.in_progress = deposit.in_progress
+        #s.aggregates = derived_resource_uris
+
+        # store the statement by itself
+        #self.dao.store_statement(collection, id, s)
+
+        # create the deposit receipt (which involves getting hold of the item's metadata first if it exists
+        #metadata = self.dao.get_metadata(collection, id)
+        #receipt = self.deposit_receipt(collection, id, deposit, s, metadata)
+
+        receipt = self.deposit_receipt(silo, dataset_id, dataset, "added zip to dataset")
+        
+        # now augment the receipt with the details of this particular deposit
+        # this handles None arguments, and converts the xml receipt into a string
+        receipt = self.augmented_receipt(receipt, deposit_uri, derived_resource_uris)
+
+        # finally, assemble the deposit response and return
+        dr = DepositResponse()
+        dr.receipt = receipt.serialise()
+        dr.location = receipt.edit_uri
+        return dr
+        """
+        Here's our reference for this method:
+        
+        # File upload by a not-too-savvy method - Service-orientated fallback:
+                # Assume file upload to 'filename'
+                params = request.POST
+                item = c_silo.get_item(id)
+                filename = params.get('filename')
+                if not filename:
+                    filename = params['file'].filename
+                upload = params.get('file')
+                if JAILBREAK.search(filename) != None:
+                    abort(400, "'..' cannot be used in the path or as a filename")
+                target_path = filename
+                
+                if item.isfile(target_path):
+                    code = 204
+                elif item.isdir(target_path):
+                    response.content_type = "text/plain"
+                    response.status_int = 403
+                    response.status = "403 Forbidden"
+                    return "Cannot POST a file on to an existing directory"
+                else:
+                    code = 201
+
+                if filename == "manifest.rdf":
+                    #Copy the uploaded file to a tmp area 
+                    mani_file = os.path.join('/tmp', filename.lstrip(os.sep))
+                    mani_file_obj = open(mani_file, 'w')
+                    shutil.copyfileobj(upload.file, mani_file_obj)
+                    upload.file.close()
+                    mani_file_obj.close()
+                    #test rdf file
+                    mani_file_obj = open(mani_file, 'r')
+                    manifest_str = mani_file_obj.read()
+                    mani_file_obj.close()
+                    if not test_rdf(manifest_str):
+                        response.status_int = 400
+                        return "Bad manifest file"
+                    #munge rdf
+                    item.increment_version_delta(clone_previous_version=True, copy_filenames=['manifest.rdf'])
+                    a = item.get_rdf_manifest()
+                    b = a.to_string()
+                    munge_manifest(manifest_str, item)
+                else:
+                    if code == 204:
+                        item.increment_version_delta(clone_previous_version=True, copy_filenames=['manifest.rdf', filename])
+                    else:
+                        item.increment_version_delta(clone_previous_version=True, copy_filenames=['manifest.rdf'])
+                    item.put_stream(target_path, upload.file)
+                    upload.file.close()
+                item.del_triple(item.uri, u"dcterms:modified")
+                item.add_triple(item.uri, u"dcterms:modified", datetime.now())
+                item.del_triple(item.uri, u"oxds:currentVersion")
+                item.add_triple(item.uri, u"oxds:currentVersion", item.currentversion)
+                item.sync()
+                
+                if code == 201:
+                    ag.b.creation(silo, id, target_path, ident=ident['repoze.who.userid'])
+                    response.status = "201 Created"
+                    response.status_int = 201
+                    response.headers["Content-Location"] = url(controller="datasets", action="itemview", id=id, silo=silo, path=filename)
+                    response_message = "201 Created. Added file %s to item %s" % (filename, id)
+                else:
+                    ag.b.change(silo, id, target_path, ident=ident['repoze.who.userid'])
+                    response.status = "204 Updated"
+                    response.status_int = 204
+                    response_message = None
+        """
 
     def delete_content(self, path, delete):
         """
@@ -432,6 +637,11 @@ class SwordDataBank(SwordServer):
     # from the item's rdf graph
     def extract_metadata(self, item):
         return {}, {}
+        
+    def augmented_receipt(self, receipt, original_deposit_uri, derived_resource_uris=[]):
+        receipt.original_deposit_uri = original_deposit_uri
+        receipt.derived_resource_uris = derived_resource_uris     
+        return receipt
     
 class DataBankAuthenticator(Authenticator):
     def __init__(self, config): 
@@ -448,34 +658,38 @@ class URLManager(object):
         self.config = config
         
     def silo_url(self, silo):
-        return self.config.base_url + "silo/" + silo
+        return self.config.base_url + "silo/" + urllib.quote(silo)
         
     def atom_id(self, silo, identifier):
         # FIXME: this is made up, is there something better?
-        return "tag:container@databank/" + silo + "/" + identifier
+        return "tag:container@databank/" + urllib.quote(silo) + "/" + urllib.quote(identifier)
         
     def cont_uri(self, silo, identifier):
-        return self.config.base_url + "content/" + silo + "/" + identifier
+        return self.config.base_url + "content/" + urllib.quote(silo) + "/" + urllib.quote(identifier)
         
     def em_uri(self, silo, identifier):
         """ The EM-URI """
-        return self.config.base_url + "edit-media/" + silo + "/" + identifier
+        return self.config.base_url + "edit-media/" + urllib.quote(silo) + "/" + urllib.quote(identifier)
         
     def edit_uri(self, silo, identifier):
         """ The Edit-URI """
-        return self.config.base_url + "edit/" + silo + "/" + identifier
+        return self.config.base_url + "edit/" + urllib.quote(silo) + "/" + urllib.quote(identifier)
         
     def html_url(self, silo, identifier):
         """ The url for the HTML splash page of an object in the store """
         # FIXME: what is this really?
-        return self.config.base_url + "html/" + silo + "/" + identifier
+        return self.config.base_url + "html/" + urllib.quote(silo) + "/" + urllib.quote(identifier)
     
     def state_uri(self, silo, identifier, type):
-        root = self.config.base_url + "statement/" + silo + "/" + identifier
+        root = self.config.base_url + "statement/" + urllib.quote(silo) + "/" + urllib.quote(identifier)
         if type == "atom":
             return root + ".atom"
         elif type == "ore":
             return root + ".rdf"
+            
+    def file_uri(self, silo, identifier, filename):
+        """ The URL for accessing the parts of an object in the store """
+        return self.config.base_url + "file/" + urllib.quote(silo) + "/" + urllib.quote(identifier) + "/" + urllib.quote(filename)
         
 class DataBankErrors(object):
     dataset_conflict = "http://databank.ox.ac.uk/errors/DatasetConflict"
