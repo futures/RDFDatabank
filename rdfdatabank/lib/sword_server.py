@@ -1,5 +1,6 @@
 from rdfdatabank.lib.utils import allowable_id2, create_new
 from sss import SwordServer, Authenticator, Auth, ServiceDocument, SDCollection, DepositResponse, SwordError, EntryDocument
+from sss.negotiator import AcceptParameters, ContentType
 
 from pylons import app_globals as ag
 
@@ -23,8 +24,16 @@ class SwordDataBank(SwordServer):
         self.um = URLManager(config)
 
     def container_exists(self, path):
+        # FIXME: rationalise this method with the url manager's role to interpret
+        # paths appropriately
+        
         # first thing to do is deconstruct the path into silo/dataset
         silo, dataset_id = path.split("/", 1)
+        
+        if dataset_id.endswith(".rdf"):
+            dataset_id = dataset_id[:-4]
+        elif dataset_id.endswith(".atom"):
+            dataset_id = dataset_id[:-5]
         
         if not ag.granary.issilo(silo):
             return False
@@ -617,14 +626,41 @@ class SwordDataBank(SwordServer):
         raise NotImplementedError()
 
     def get_statement(self, path):
-        raise NotImplementedError()
+        accept_parameters, silo, dataset_id = self.um.interpret_statement_path(path)
+        
+        if not ag.granary.issilo(silo):
+            return SwordError(status=404, msg="silo is not a silo")
+
+        silos = ag.granary.silos
+        
+        # FIXME: incorporate authentication
+        #silos = ag.authz(granary_list, ident)      
+        if silo not in silos:
+            # FIXME: if it exists, but we can't deposit, we need to 403
+            raise SwordError(status=404, msg="silo is not in the allowed list")
+        
+        # get a full silo object
+        rdf_silo = ag.granary.get_rdf_silo(silo)
+        
+        if not rdf_silo.exists(dataset_id):
+            raise SwordError(status=404, msg="dataset does not exist in silo")
+            
+        # now get the dataset object itself
+        dataset = rdf_silo.get_item(dataset_id)
+        
+        if accept_parameters.content_type.mimetype() == "application/rdf+xml":
+            return self.get_rdf_statement(dataset)
+        elif accept_parameters.content_type.mimetype() == "application/atom+xml;type=feed":
+            return self.get_atom_statement(dataset)
+        else:
+            return None
 
     # NOT PART OF STANDARD, BUT USEFUL    
     # These are used by the webpy interface to provide easy access to certain
     # resources.  Not implementing them is fine.  If they are not implemented
     # then you just have to make sure that your file paths don't rely on the
     # Part http handler
-        
+     
     def get_part(self, path):
         """
         Get a file handle to the part identified by the supplied path
@@ -634,6 +670,17 @@ class SwordDataBank(SwordServer):
         
     def get_edit_uri(self, path):
         raise NotImplementedError()
+    
+    def get_rdf_statement(self, dataset):
+        # The RDF statement is just the manifest file...
+        manifest = dataset.get_rdf_manifest()
+        f = open(manifest.filepath, "r")
+        return f.read()
+        
+    def get_atom_statement(self, dataset):
+        # FIXME: there isn't a requirement at this stage to support the atom
+        # statment for DataBank
+        return None
         
     def deposit_receipt(self, silo, identifier, item, treatment, verbose_description=None):
         """
@@ -748,6 +795,19 @@ class URLManager(object):
     def file_uri(self, silo, identifier, filename):
         """ The URL for accessing the parts of an object in the store """
         return self.config.base_url + "file/" + urllib.quote(silo) + "/" + urllib.quote(identifier) + "/" + urllib.quote(filename)
+        
+    def interpret_statement_path(self, path):
+        accept_parameters = None
+        if path.endswith("rdf"):
+            accept_parameters = AcceptParameters(ContentType("application/rdf+xml"))
+            path = path[:-4]
+        elif path.endswith("atom"):
+            accept_parameters = AcceptParameters(ContentType("application/atom+xml;type=feed"))
+            path = path[:-5]
+            
+        silo, dataset_id = path.split("/", 1)
+
+        return accept_parameters, silo, dataset_id
         
 class DataBankErrors(object):
     dataset_conflict = "http://databank.ox.ac.uk/errors/DatasetConflict"
