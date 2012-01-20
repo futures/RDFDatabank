@@ -1,5 +1,5 @@
 from rdfdatabank.lib.utils import allowable_id2, create_new
-from sss import SwordServer, Authenticator, Auth, ServiceDocument, SDCollection, DepositResponse, SwordError, EntryDocument
+from sss import SwordServer, Authenticator, Auth, ServiceDocument, SDCollection, DepositResponse, SwordError, EntryDocument, Statement
 from sss.negotiator import AcceptParameters, ContentType
 
 from pylons import app_globals as ag
@@ -223,24 +223,30 @@ class SwordDataBank(SwordServer):
        #     derived_resource_uris = self.get_derived_resource_uris(collection, id, derived_resources)
 
         # the aggregation uri
-        #agg_uri = self.um.agg_uri(collection, id)
+        agg_uri = self.um.agg_uri(silo, deposit.slug)
 
         # the Edit-URI
-        #edit_uri = self.um.edit_uri(collection, id)
+        edit_uri = self.um.edit_uri(silo, deposit.slug)
 
         # create the initial statement
-        #s = Statement()
-        #s.aggregation_uri = agg_uri
-        #s.rem_uri = edit_uri
+        s = Statement(aggregation_uri=agg_uri, rem_uri=edit_uri, states=[DataBankStates.initial_state])
+        
+        # FIXME: need to sort out authentication before we can do this ...
         #by = deposit.auth.by if deposit.auth is not None else None
         #obo = deposit.auth.obo if deposit.auth is not None else None
         #if deposit_uri is not None:
         #    s.original_deposit(deposit_uri, datetime.now(), deposit.packaging, by, obo)
-        #s.in_progress = deposit.in_progress
         #s.aggregates = derived_resource_uris
 
-        # store the statement by itself
-        #self.dao.store_statement(collection, id, s)
+        # In creating the statement we use the existing manifest.rdf file in the
+        # item:
+        manifest = item.get_rdf_manifest()
+        f = open(manifest.filepath, "r")
+        rdf_string = f.read()
+
+        # create the new manifest and store it
+        new_manifest = s.serialise_rdf(rdf_string)
+        item.put_stream("manifest.rdf", new_manifest)
 
         # create the basic deposit receipt (which involves getting hold of the item's metadata first if it exists)
         #entry_disseminator = self.configuration.get_entry_disseminator()()
@@ -396,8 +402,6 @@ class SwordDataBank(SwordServer):
             dataset.put_stream(deposit.filename, deposit.content)
             ssslog.debug("New incoming file stored with filename " + deposit.filename)
             
-            
-
             # FIXME: this doesn't happen here ... (keeping for the time being for reference)
             
             # now that we have stored the atom and the content, we can invoke a package ingester over the top to extract
@@ -426,35 +430,60 @@ class SwordDataBank(SwordServer):
         dataset.add_triple(dataset.uri, u"dcterms:modified", datetime.now())
         dataset.del_triple(dataset.uri, u"oxds:currentVersion")
         dataset.add_triple(dataset.uri, u"oxds:currentVersion", dataset.currentversion)
+        
+        # FIXME: how safe is this?  What other ore:aggregates might there be?
+        # we need to back out some of the triples in preparation to update the
+        # statement
+        dataset.get_rdf_manifest().add_namespace("sword", "http://purl.org/net/sword/terms/")
+        aggregates = dataset.list_rdf_objects(dataset.uri, u"ore:aggregates")
+        original_deposits = dataset.list_rdf_objects(dataset.uri, u"sword:originalDeposit")
+        states = dataset.list_rdf_objects(dataset.uri, u"sword:state")
+        
+        for a in aggregates:
+            dataset.del_triple(a, "*")
+        for od in original_deposits:
+            dataset.del_triple(od, "*")
+        for s in states:
+            dataset.del_triple(s, "*")
+        dataset.del_triple(dataset.uri, u"ore:aggregates")
+        dataset.del_triple(dataset.uri, u"sword:originalDeposit")
+        dataset.del_triple(dataset.uri, u"sword:state")
+        
         dataset.sync()
 
-        # NOTE: none of this is probably needed, just leave in for reference
-        # for the time being
-        
         # the aggregation uri
-        #agg_uri = self.um.agg_uri(collection, id)
+        agg_uri = self.um.agg_uri(silo, dataset_id)
 
         # the Edit-URI
-        #edit_uri = self.um.edit_uri(collection, id)
+        edit_uri = self.um.edit_uri(silo, dataset_id)
 
-        # create the new statement
-        #s = Statement()
-        #s.aggregation_uri = agg_uri
-        #s.rem_uri = edit_uri
+        # create the statement outline
+        s = Statement(aggregation_uri=agg_uri, rem_uri=edit_uri, states=[DataBankStates.populated_state])
+        
+        # add the aggregation
+        s.aggregations = [deposit_uri]
+        
+        # FIXME: need to sort out authentication before we can do this ...
+        #by = deposit.auth.by if deposit.auth is not None else None
+        #obo = deposit.auth.obo if deposit.auth is not None else None
         #if deposit_uri is not None:
-        #    by = deposit.auth.by if deposit.auth is not None else None
-        #    obo = deposit.auth.obo if deposit.auth is not None else None
         #    s.original_deposit(deposit_uri, datetime.now(), deposit.packaging, by, obo)
-        #s.in_progress = deposit.in_progress
+        
+        # NOTE: there are no derived resource uris at this point
         #s.aggregates = derived_resource_uris
+        
+        # add the original deposit
+        s.original_deposit(deposit_uri, datetime.now(), deposit.packaging, None, None)
 
-        # store the statement by itself
-        #self.dao.store_statement(collection, id, s)
-
-        # create the deposit receipt (which involves getting hold of the item's metadata first if it exists
-        #metadata = self.dao.get_metadata(collection, id)
-        #receipt = self.deposit_receipt(collection, id, deposit, s, metadata)
-
+        # create the new manifest and store it
+        manifest = dataset.get_rdf_manifest()
+        f = open(manifest.filepath, "r")
+        rdf_string = f.read()
+        
+        new_manifest = s.serialise_rdf(rdf_string)
+        dataset.put_stream("manifest.rdf", new_manifest)
+        
+        # now generate a receipt
         receipt = self.deposit_receipt(silo, dataset_id, dataset, "added zip to dataset")
         
         # now augment the receipt with the details of this particular deposit
@@ -779,7 +808,10 @@ class URLManager(object):
     def edit_uri(self, silo, identifier):
         """ The Edit-URI """
         return self.config.base_url + "edit/" + urllib.quote(silo) + "/" + urllib.quote(identifier)
-        
+    
+    def agg_uri(self, silo, identifier):
+        return self.config.db_base_url + urllib.quote(silo) + "/datasets/" + urllib.quote(identifier)
+    
     def html_url(self, silo, identifier):
         """ The url for the HTML splash page of an object in the store """
         # FIXME: what is this really?
@@ -811,3 +843,7 @@ class URLManager(object):
         
 class DataBankErrors(object):
     dataset_conflict = "http://databank.ox.ac.uk/errors/DatasetConflict"
+    
+class DataBankStates(object):
+    initial_state = ("http://databank.ox.ac.uk/state/NewDatasetContainer", "Only the container for the dataset has been created so far")
+    populated_state = ("http://databank.ox.ac.uk/state/PopulatedDataset", "The dataset contains content")

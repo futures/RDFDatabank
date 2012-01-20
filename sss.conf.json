@@ -5,6 +5,9 @@
     # if you are using Apache, you should probably use this base_url instead
     # "base_url" : "http://localhost/sss/",
     
+    # the databank base url for the UI and other such reference points
+    "db_base_url" : "http://192.168.23.133/",
+    
     # The number of collections that SSS will create and give to users to deposit content into
     #"num_collections" : 10,
     
