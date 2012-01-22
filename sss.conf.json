@@ -65,7 +65,8 @@
     
     # list of package formats that SSS can provide when retrieving the Media Resource
     "sword_disseminate_package" : [
-        "http://purl.org/net/sword/package/SimpleZip"
+        "http://purl.org/net/sword/package/SimpleZip",
+        "http://dataflow.ox.ac.uk/package/DataBankBagIt"
     ],
     
     

@@ -183,6 +183,7 @@ class SwordDataBank(SwordServer):
         
         # FIXME: creator needs to be passed in from ident - currently passing empty string
         item = create_new(rdf_silo, deposit.slug, "", {})
+        self._ingest_metadata(item, deposit)
         
         # FIXME: username involved here too
         # Broadcast change as message
@@ -623,7 +624,7 @@ class SwordDataBank(SwordServer):
 
         # pick either the deposit receipt or the pure statement to return to the client
         if accept_parameters.content_type.mimetype() == "application/atom+xml;type=entry":
-            receipt = self.deposit_receipt(silo, dataset_id, dataset, None)
+            receipt = self.deposit_receipt(silo, dataset_id, dataset, "no treatment") # FIXME: what should the treatment here be
             return receipt.serialise()
         # FIXME: at the moment we don't support conneg on the edit uri
         #elif accept_parameters.content_type.mimetype() == "application/rdf+xml":
@@ -776,6 +777,15 @@ class SwordDataBank(SwordServer):
         receipt.original_deposit_uri = original_deposit_uri
         receipt.derived_resource_uris = derived_resource_uris     
         return receipt
+        
+    def _ingest_metadata(self, item, deposit):
+        ed = deposit.get_entry_document()
+        for dc, values in ed.dc_metadata.iteritems():
+            for v in values:
+                item.add_triple(item.uri, "dcterms:" + dc, v)
+        # FIXME: for the moment we just comply with the SWORD spec requirements
+        # to support dc metadata.  Other forms of metadata can be dealt with later
+        item.sync()
     
 class DataBankAuthenticator(Authenticator):
     def __init__(self, config): 
