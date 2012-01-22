@@ -1,11 +1,12 @@
 from rdfdatabank.lib.utils import allowable_id2, create_new
-from sss import SwordServer, Authenticator, Auth, ServiceDocument, SDCollection, DepositResponse, SwordError, EntryDocument, Statement
+from sss import SwordServer, Authenticator, Auth, ServiceDocument, SDCollection, DepositResponse, SwordError, EntryDocument, Statement, Namespaces
 from sss.negotiator import AcceptParameters, ContentType
 
 from pylons import app_globals as ag
 
 import uuid, re, logging, urllib
 from datetime import datetime
+from rdflib import URIRef
 
 ssslog = logging.getLogger(__name__)
 
@@ -22,6 +23,7 @@ class SwordDataBank(SwordServer):
         self.auth_credentials = auth
         
         self.um = URLManager(config)
+        self.ns = Namespaces()
 
     def container_exists(self, path):
         # FIXME: rationalise this method with the url manager's role to interpret
@@ -249,10 +251,7 @@ class SwordDataBank(SwordServer):
         new_manifest = s.serialise_rdf(rdf_string)
         item.put_stream("manifest.rdf", new_manifest)
 
-        # create the basic deposit receipt (which involves getting hold of the item's metadata first if it exists)
-        #entry_disseminator = self.configuration.get_entry_disseminator()()
-        #dc_metadata, other_metadata = entry_disseminator.disseminate(item)
-        
+        # now generate a receipt for the deposit
         receipt = self.deposit_receipt(silo, deposit.slug, item, "created new item")
 
         # FIXME: while we don't have full text deposit, we don't need to augment
@@ -747,6 +746,7 @@ class SwordDataBank(SwordServer):
         # ensure that there is a metadata object, and that it is populated with enough information to build the
         # deposit receipt
         dc_metadata, other_metadata = self.extract_metadata(item)
+        ssslog.debug("Incorporating metadata: " + str(dc_metadata))
         if dc_metadata is None:
             dc_metadata = {}
         if not dc_metadata.has_key("title"):
@@ -768,10 +768,28 @@ class SwordDataBank(SwordServer):
 
         return dr
         
-    # FIXME: we need to work directly with the RecordSilo code to extract metadata
-    # from the item's rdf graph
     def extract_metadata(self, item):
-        return {}, {}
+        graph = item.get_graph()
+        dc_metadata = {}
+        other_metadata = {}
+        # we're just going to focus on DC metadata, to comply with the SWORD
+        # spec
+        dc_offset = len(self.ns.DC_NS)
+        
+        # debug!
+        #ssslog.debug("Item URI: " + item.uri)
+        #ssslog.debug("Extracting metadata from: " + str(graph.triples((None, None, None))))
+        #for triple in graph.triples((URIRef(item.uri), None, None)):
+        
+        for s, p, o in graph.triples((URIRef(item.uri), None, None)):
+            if p.startswith(self.ns.DC_NS):
+                # it is Dublin Core
+                field = p[dc_offset:]
+                if dc_metadata.has_key(field):
+                    dc_metadata[field].append(o)
+                else:
+                    dc_metadata[field] = [o]
+        return dc_metadata, other_metadata
         
     def augmented_receipt(self, receipt, original_deposit_uri, derived_resource_uris=[]):
         receipt.original_deposit_uri = original_deposit_uri
@@ -780,6 +798,17 @@ class SwordDataBank(SwordServer):
         
     def _ingest_metadata(self, item, deposit):
         ed = deposit.get_entry_document()
+        
+        # try and map the standard atom elements first
+        for k, vs in ed.other_metadata.iteritems():
+            if k == "atom_title":
+                for v in vs:
+                    item.add_triple(item.uri, "dcterms:title", v)
+            if k == "atom_summary":
+                for v in vs:
+                    item.add_triple(item.uri, "dcterms:abstract", v)
+            # FIXME: a fuller treatment of atom metadata may be appropriate here
+        
         for dc, values in ed.dc_metadata.iteritems():
             for v in values:
                 item.add_triple(item.uri, "dcterms:" + dc, v)
