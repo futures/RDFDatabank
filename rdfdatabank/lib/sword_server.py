@@ -375,9 +375,8 @@ class SwordDataBank(SwordServer):
         if JAILBREAK.search(deposit.filename) != None:
             raise SwordError(error_uri=Errors.bad_request, msg="'..' cannot be used in the path or as a filename")
         
-        
-        
         # FIXME: at the moment this metadata operation is not supported by DataBank
+        #
         # first figure out what to do about the metadata
         keep_atom = False
         #if deposit.atom is not None:
@@ -402,7 +401,7 @@ class SwordDataBank(SwordServer):
             dataset.put_stream(deposit.filename, deposit.content)
             ssslog.debug("New incoming file stored with filename " + deposit.filename)
             
-            # FIXME: this doesn't happen here ... (keeping for the time being for reference)
+            # FIXME: unpacking doesn't happen here ... (keeping for the time being for reference)
             
             # now that we have stored the atom and the content, we can invoke a package ingester over the top to extract
             # all the metadata and any files we want.  Notice that we pass in the metadata_relevant flag, so the
@@ -419,6 +418,7 @@ class SwordDataBank(SwordServer):
             
             # An identifier which will resolve to the package just deposited
             deposit_uri = self.um.file_uri(silo, dataset_id, deposit.filename)
+            ssslog.debug("Incoming file has been stored at URI " + deposit_uri)
 
         # FIXME: it feels like there's too tight a coupling in DataBank between
         # the web layer and the business logic layer - I have to replicate stuff
@@ -458,11 +458,11 @@ class SwordDataBank(SwordServer):
         edit_uri = self.um.edit_uri(silo, dataset_id)
 
         # create the statement outline
-        s = Statement(aggregation_uri=agg_uri, rem_uri=edit_uri, states=[DataBankStates.populated_state])
-        
-        # add the aggregation
-        s.aggregations = [deposit_uri]
-        
+        # FIXME: there is something weird going on with instantiating this object without the original_deposits argument
+        # apparently if I don't explicitly say there are no original deposits, then it "remembers" original deposits 
+        # from previous uses of the object
+        s = Statement(aggregation_uri=agg_uri, rem_uri=edit_uri, states=[DataBankStates.populated_state], original_deposits=[])
+         
         # FIXME: need to sort out authentication before we can do this ...
         #by = deposit.auth.by if deposit.auth is not None else None
         #obo = deposit.auth.obo if deposit.auth is not None else None
@@ -472,8 +472,10 @@ class SwordDataBank(SwordServer):
         # NOTE: there are no derived resource uris at this point
         #s.aggregates = derived_resource_uris
         
-        # add the original deposit
+        # add the original deposit (which sorts out the aggregations for us too)
+        ssslog.debug("Original Deposits: " + str(s.original_deposits))
         s.original_deposit(deposit_uri, datetime.now(), deposit.packaging, None, None)
+        ssslog.debug("Original Deposits: " + str(s.original_deposits))
 
         # create the new manifest and store it
         manifest = dataset.get_rdf_manifest()
@@ -481,6 +483,8 @@ class SwordDataBank(SwordServer):
         rdf_string = f.read()
         
         new_manifest = s.serialise_rdf(rdf_string)
+        ssslog.debug("New Manifest: " + new_manifest)
+        
         dataset.put_stream("manifest.rdf", new_manifest)
         
         # now generate a receipt
@@ -838,7 +842,7 @@ class URLManager(object):
         return "tag:container@databank/" + urllib.quote(silo) + "/" + urllib.quote(identifier)
         
     def cont_uri(self, silo, identifier):
-        return self.config.base_url + "content/" + urllib.quote(silo) + "/" + urllib.quote(identifier)
+        return self.config.base_url + "edit-media/" + urllib.quote(silo) + "/" + urllib.quote(identifier)
         
     def em_uri(self, silo, identifier):
         """ The EM-URI """
@@ -865,7 +869,7 @@ class URLManager(object):
             
     def file_uri(self, silo, identifier, filename):
         """ The URL for accessing the parts of an object in the store """
-        return self.config.base_url + "file/" + urllib.quote(silo) + "/" + urllib.quote(identifier) + "/" + urllib.quote(filename)
+        return self.config.db_base_url + urllib.quote(silo) + "/datasets/" + urllib.quote(identifier) + "/" + urllib.quote(filename)
         
     def interpret_statement_path(self, path):
         accept_parameters = None
