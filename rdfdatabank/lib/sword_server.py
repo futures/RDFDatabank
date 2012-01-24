@@ -102,40 +102,6 @@ class SwordDataBank(SwordServer):
 
         # serialise and return
         return service.serialise()
-        
-        """
-        This is our reference for the service document - a list of silos appropriate to the user
-        def authz(granary_list,ident):
-            g = ag.granary
-            g.state.revert()
-            g._register_silos()
-            granary_list = g.silos
-            def _parse_owners(silo_name):
-                kw = g.describe_silo(silo_name)
-                if "owners" in kw.keys():
-                    owners = [x.strip() for x in kw['owners'].split(",") if x]
-                    return owners
-                else:
-                    return []
-            #For auth, the code is looking at the list of owners against each silo and not looking at the owner list against each user. A '*' here is meaningless.
-            #TODO: Modify code to look at both and keep both silo owner and silos a user has acces to in users.py in sunc and use both
-            if ident['role'] == "admin":
-                authd = []
-                for item in granary_list:
-                    owners = _parse_owners(item)
-                    if '*' in owners:
-                        return granary_list
-                    if ident['repoze.who.userid'] in owners:
-                        authd.append(item)
-                return authd
-            else:
-                authd = []
-                for item in granary_list:
-                    owners = _parse_owners(item)
-                    if ident['repoze.who.userid'] in owners:
-                        authd.append(item)
-                return authd
-        """
 
     def list_collection(self, path):
         """
@@ -157,11 +123,9 @@ class SwordDataBank(SwordServer):
         # FIXME: do we care if an On-Behalf-Of deposit is made, but mediation is
         # turned off?  And should this be pushed up to the pylons layer?
 
-        # get the list of silos
-        silos = ag.granary.silos
-        
-        # FIXME: get the auth list of silos
-        # silos = ag.authz(granary_list, ident)
+        # get the authorised list of silos
+        granary_list = ag.granary.silos
+        silos = ag.authz(granary_list, self.auth_credentials.identity)
         
         # does the collection/silo exist?  If not, we can't do a deposit
         if silo not in silos:
@@ -180,23 +144,11 @@ class SwordDataBank(SwordServer):
             raise SwordError(error_uri=Errors.bad_request, msg="Dataset name can contain only the following characters - " + 
                                                                 ag.naming_rule + " and has to be more than 1 character")
         
-        # FIXME: we need to extract from the deposit itself the metadata that the item needs
-        # and to put them into the params (which is currently an empty dict)
-        
-        # FIXME: creator needs to be passed in from ident - currently passing empty string
-        item = create_new(rdf_silo, deposit.slug, "", {})
+        # NOTE: we pass in an empty dictionary of metadata on create, and then run
+        # _ingest_metadata to augment the item from the deposit
+        item = create_new(rdf_silo, deposit.slug, self.auth_credentials.username, {})
         self._ingest_metadata(item, deposit)
         
-        # FIXME: username involved here too
-        # Broadcast change as message
-        ag.b.creation(silo, deposit.slug, ident="")
-
-        # FIXME: probably use the entry ingester to generate the metadata dictionary to pass to create_new
-        # store the incoming atom document if necessary
-        #if deposit.atom is not None:
-        #    entry_ingester = self.configuration.get_entry_ingester()(self.dao)
-        #    entry_ingester.ingest(collection, id, deposit.atom)
-
         # NOTE: left in for reference for the time being, but deposit_new 
         # only support entry only deposits in databank.  This will need to be
         # re-introduced for full sword support
@@ -235,8 +187,11 @@ class SwordDataBank(SwordServer):
         s = Statement(aggregation_uri=agg_uri, rem_uri=edit_uri, states=[DataBankStates.initial_state])
         
         # FIXME: need to sort out authentication before we can do this ...
-        #by = deposit.auth.by if deposit.auth is not None else None
-        #obo = deposit.auth.obo if deposit.auth is not None else None
+        # FIXME: also, it's not relevant unless we take a binary-only deposit, which
+        # we currently don't
+        #
+        #by = deposit.auth.username if deposit.auth is not None else None
+        #obo = deposit.auth.on_behalf_of if deposit.auth is not None else None
         #if deposit_uri is not None:
         #    s.original_deposit(deposit_uri, datetime.now(), deposit.packaging, by, obo)
         #s.aggregates = derived_resource_uris
@@ -265,6 +220,9 @@ class SwordDataBank(SwordServer):
         dr = DepositResponse()
         dr.receipt = receipt.serialise()
         dr.location = receipt.edit_uri
+        
+        # Broadcast change as message
+        ag.b.creation(silo, deposit.slug, ident=self.auth_credentials.username)
         
         return dr
 
