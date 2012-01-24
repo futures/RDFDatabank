@@ -40,10 +40,9 @@ class SwordDataBank(SwordServer):
         if not ag.granary.issilo(silo):
             return False
 
-        silos = ag.granary.silos
+        granary_list = ag.granary.silos
+        silos = ag.authz(granary_list, self.auth_credentials.identity)
         
-        # FIXME: incorporate authentication
-        #silos = ag.authz(granary_list, ident)
         if silo not in silos:
             return False
         
@@ -66,12 +65,13 @@ class SwordDataBank(SwordServer):
         service = ServiceDocument(version=self.config.sword_version,
                                     max_upload_size=self.config.max_upload_size)
         
-        # FIXME: at the moment, there is not authentication, so this is the
-        # full list of silos
+        # get the authorised list of silos
+        granary_list = ag.granary.silos
+        silos = ag.authz(granary_list, self.auth_credentials.identity)
         
         # now for each collection create an sdcollection
         collections = []
-        for col_name in ag.granary.silos:
+        for col_name in silos:        
             href = self.um.silo_url(col_name)
             title = col_name
             mediation = self.config.mediation
