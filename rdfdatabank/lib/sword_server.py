@@ -1,5 +1,5 @@
 from rdfdatabank.lib.utils import allowable_id2, create_new
-from sss import SwordServer, Authenticator, Auth, ServiceDocument, SDCollection, DepositResponse, SwordError, EntryDocument, Statement, Namespaces
+from sss import SwordServer, Authenticator, Auth, ServiceDocument, SDCollection, DepositResponse, SwordError, EntryDocument, Statement, Namespaces, AuthException
 from sss.negotiator import AcceptParameters, ContentType
 
 from pylons import app_globals as ag
@@ -43,7 +43,7 @@ class SwordDataBank(SwordServer):
         silos = ag.granary.silos
         
         # FIXME: incorporate authentication
-        #silos = ag.authz(granary_list, ident)      
+        #silos = ag.authz(granary_list, ident)
         if silo not in silos:
             return False
         
@@ -825,10 +825,31 @@ class DataBankAuthenticator(Authenticator):
         self.config = config
         
     def basic_authenticate(self, username, password, obo):
-        # FIXME: we're going to implement a very weak authentication mechanism
-        # for the time being
-        return Auth(username, obo)
+        # In [AtomPub] Section 14, implementations MUST support HTTP Basic Authentication 
+        # in conjunction with a TLS connection. The SWORD Profile relaxes this requirement: 
+        # SWORD client and server implementations SHOULD be capable of being configured to 
+        # use HTTP Basic Authentication [RFC2617] in conjunction with a TLS connection 
+        # as specified by [RFC2818].
         
+        # FIXME: basic authentication does not attempt to actually authenticate
+        # anyone, it simply rejects any such request.  This is in-line with SWORD
+        # above, but it would be better if it did authenticate.
+        
+        # Nonetheless, in general, databank will use repoze for everything including
+        # HTTP basic, so this method should never be activated
+        #return Auth(username, obo)
+        raise AuthException(authentication_failed=True, msg="HTTP Basic Auth without repoze.who not permitted on this server")
+        
+    def repoze_who_authenticate(self, identity, obo):
+        # the authentication is actually already done, so all we need to do is
+        # populate the Auth object
+        return DataBankAuth(identity["repoze.who.userid"], obo, identity)
+
+class DataBankAuth(Auth):
+    def __init__(self, username, on_behalf_of, identity):
+        Auth.__init__(self, username, on_behalf_of)
+        self.identity = identity
+ 
 # FIXME: we need to discuss with the team a good URL space      
 class URLManager(object):
     def __init__(self, config):
