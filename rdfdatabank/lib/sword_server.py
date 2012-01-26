@@ -310,10 +310,9 @@ class SwordDataBank(SwordServer):
         if not ag.granary.issilo(silo):
             return SwordError(status=404, empty=True)
 
-        silos = ag.granary.silos
+        granary_list = ag.granary.silos
+        silos = ag.authz(granary_list, deposit.auth.identity)      
         
-        # FIXME: incorporate authentication
-        #silos = ag.authz(granary_list, ident)      
         if silo not in silos:
             # FIXME: if it exists, but we can't deposit, we need to 403
             raise SwordError(status=404, empty=True)
@@ -421,19 +420,19 @@ class SwordDataBank(SwordServer):
         # from previous uses of the object
         s = Statement(aggregation_uri=agg_uri, rem_uri=edit_uri, states=[DataBankStates.populated_state], original_deposits=[])
          
-        # FIXME: need to sort out authentication before we can do this ...
-        #by = deposit.auth.by if deposit.auth is not None else None
-        #obo = deposit.auth.obo if deposit.auth is not None else None
-        #if deposit_uri is not None:
-        #    s.original_deposit(deposit_uri, datetime.now(), deposit.packaging, by, obo)
+        # set the original deposit (which sorts out the aggregations for us too)
+        by = deposit.auth.username if deposit.auth is not None else None
+        obo = deposit.auth.on_behalf_of if deposit.auth is not None else None
+        if deposit_uri is not None:
+            s.original_deposit(deposit_uri, datetime.now(), deposit.packaging, by, obo)
         
         # NOTE: there are no derived resource uris at this point
         #s.aggregates = derived_resource_uris
         
         # add the original deposit (which sorts out the aggregations for us too)
-        ssslog.debug("Original Deposits: " + str(s.original_deposits))
-        s.original_deposit(deposit_uri, datetime.now(), deposit.packaging, None, None)
-        ssslog.debug("Original Deposits: " + str(s.original_deposits))
+        #ssslog.debug("Original Deposits: " + str(s.original_deposits))
+        #s.original_deposit(deposit_uri, datetime.now(), deposit.packaging, None, None)
+        #ssslog.debug("Original Deposits: " + str(s.original_deposits))
 
         # create the new manifest and store it
         manifest = dataset.get_rdf_manifest()
