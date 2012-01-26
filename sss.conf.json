@@ -29,11 +29,11 @@
     # If you are using apache, you can turn off this authentication and leave it
     # to the standard apache auth module
     # "authenticate" : false,
-    "user" : "sword",
-    "password" : "sword",
+    #"user" : "sword",
+    #"password" : "sword",
     
-    "mediation" : true,
-    "obo" : "obo",
+    "mediation" : false,
+    #"obo" : "obo",
     
     # What media ranges should the app:accept element in the Service Document support
     "app_accept" : [ "*/*" ],
