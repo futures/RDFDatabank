@@ -343,8 +343,6 @@ class SwordDataBank(SwordServer):
         if deposit.content is not None:
             ssslog.info("Replace request has file content - updating")
             
-            # FIXME: how do we do this from DataBank - is it enough to increment the version as below?
-            
             # remove all the old files before adding the new.  We always leave
             # behind the metadata; this will be overwritten later if necessary
             #self.dao.remove_content(collection, id, True, keep_atom)
@@ -366,19 +364,12 @@ class SwordDataBank(SwordServer):
             # a list of identifiers which will resolve to the derived resources
             #derived_resource_uris = self.get_derived_resource_uris(collection, id, derived_resources)
 
-            # FIXME: I don't know if this is really how this should be done -
-            # need to understand more about the URL space
-            
             # An identifier which will resolve to the package just deposited
             deposit_uri = self.um.file_uri(silo, dataset_id, deposit.filename)
             ssslog.debug("Incoming file has been stored at URI " + deposit_uri)
 
-        # FIXME: it feels like there's too tight a coupling in DataBank between
-        # the web layer and the business logic layer - I have to replicate stuff
-        # like this in this controller, rather than rely on some update method
-        # in the core to do it for me
-        
         # Taken from dataset.py, seems to be the done thing when adding an item.
+        # NOTE: confirmed with Anusha that this is correct
         dataset.del_triple(dataset.uri, u"dcterms:modified")
         dataset.add_triple(dataset.uri, u"dcterms:modified", datetime.now())
         dataset.del_triple(dataset.uri, u"oxds:currentVersion")
@@ -414,7 +405,7 @@ class SwordDataBank(SwordServer):
         # FIXME: there is something weird going on with instantiating this object without the original_deposits argument
         # apparently if I don't explicitly say there are no original deposits, then it "remembers" original deposits 
         # from previous uses of the object
-        s = Statement(aggregation_uri=agg_uri, rem_uri=edit_uri, states=[DataBankStates.populated_state], original_deposits=[])
+        s = Statement(aggregation_uri=agg_uri, rem_uri=edit_uri, states=[DataBankStates.zip_file_added], original_deposits=[])
          
         # set the original deposit (which sorts out the aggregations for us too)
         by = deposit.auth.username if deposit.auth is not None else None
@@ -803,7 +794,6 @@ class DataBankAuth(Auth):
         Auth.__init__(self, username, on_behalf_of)
         self.identity = identity
  
-# FIXME: we need to discuss with the team a good URL space      
 class URLManager(object):
     def __init__(self, config):
         self.config = config
@@ -812,7 +802,6 @@ class URLManager(object):
         return self.config.base_url + "silo/" + urllib.quote(silo)
         
     def atom_id(self, silo, identifier):
-        # FIXME: this is made up, is there something better?
         return "tag:container@databank/" + urllib.quote(silo) + "/" + urllib.quote(identifier)
         
     def cont_uri(self, silo, identifier):
@@ -831,8 +820,7 @@ class URLManager(object):
     
     def html_url(self, silo, identifier):
         """ The url for the HTML splash page of an object in the store """
-        # FIXME: what is this really?
-        return self.config.base_url + "html/" + urllib.quote(silo) + "/" + urllib.quote(identifier)
+        return self.agg_uri(silo, identifier)
     
     def state_uri(self, silo, identifier, type):
         root = self.config.base_url + "statement/" + urllib.quote(silo) + "/" + urllib.quote(identifier)
@@ -887,4 +875,4 @@ class DataBankErrors(object):
     
 class DataBankStates(object):
     initial_state = ("http://databank.ox.ac.uk/state/NewDatasetContainer", "Only the container for the dataset has been created so far")
-    populated_state = ("http://databank.ox.ac.uk/state/PopulatedDataset", "The dataset contains content")
+    zip_file_added = ("http://databank.ox.ac.uk/state/ZipFileAdded", "The dataset contains only the zip file")
