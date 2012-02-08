@@ -113,20 +113,20 @@ class SwordDataBank(SwordServer):
         -deposit:       the DepositRequest object to be processed
         Returns a DepositResponse object which will contain the Deposit Receipt or a SWORD Error
         """
-        # FIXME: where should we check MD5 checksums?  Could be costly to do this
-        # inline with large files
-        
-        # FIXME: do we care if an On-Behalf-Of deposit is made, but mediation is
-        # turned off?  And should this be pushed up to the pylons layer?
-
         # get the authorised list of silos
         granary_list = ag.granary.silos
         silos = ag.authz(granary_list, self.auth_credentials.identity)
         
         # does the collection/silo exist?  If not, we can't do a deposit
         if silo not in silos:
-            # FIXME: if it exists, but we can't deposit, we need to 403
-            raise SwordError(status=404, empty=True)
+            # if it's not in the silos it is either non-existant or it is
+            # forbidden...
+            if silo in granary_list:
+                # forbidden
+                raise SwordError(status=403, empty=True)
+            else:
+                # not found
+                raise SwordError(status=404, empty=True)
 
         # get a full silo object
         rdf_silo = ag.granary.get_rdf_silo(silo)
