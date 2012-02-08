@@ -26,32 +26,28 @@ class SwordDataBank(SwordServer):
         self.ns = Namespaces()
 
     def container_exists(self, path):
-        # FIXME: rationalise this method with the url manager's role to interpret
-        # paths appropriately
+        # extract information from the path
+        silo, dataset_id, accept_parameters = self.um.interpret_path(path)
         
-        # first thing to do is deconstruct the path into silo/dataset
-        silo, dataset_id = path.split("/", 1)
-        
-        if dataset_id.endswith(".rdf"):
-            dataset_id = dataset_id[:-4]
-        elif dataset_id.endswith(".atom"):
-            dataset_id = dataset_id[:-5]
-        
+        # is this a silo?
         if not ag.granary.issilo(silo):
             return False
 
+        # is this an authorised silo?
         granary_list = ag.granary.silos
         silos = ag.authz(granary_list, self.auth_credentials.identity)
-        
         if silo not in silos:
             return False
         
         # get a full silo object
         rdf_silo = ag.granary.get_rdf_silo(silo)
         
+        # is the dataset in the authorised silo?
         if not rdf_silo.exists(dataset_id):
             return False
-            
+        
+        # if we get here without failing, then the container exists (from the
+        # perspective of the user)
         return True
 
     def media_resource_exists(self, path):
@@ -848,7 +844,31 @@ class URLManager(object):
     def file_uri(self, silo, identifier, filename):
         """ The URL for accessing the parts of an object in the store """
         return self.config.db_base_url + urllib.quote(silo) + "/datasets/" + urllib.quote(identifier) + "/" + urllib.quote(filename)
+    
+    def interpret_path(self, path):
+        accept_parameters = None
+        silo = None
+        dataset = None
         
+        # first figure out the accept parameters from the path suffix and chomp
+        # the path down to size
+        if path.endswith("rdf"):
+            accept_parameters = AcceptParameters(ContentType("application/rdf+xml"))
+            path = path[:-4]
+        elif path.endswith("atom"):
+            accept_parameters = AcceptParameters(ContentType("application/atom+xml;type=feed"))
+            path = path[:-5]
+        
+        # check to see if this has a / separator
+        if "/" in path:
+            # deconstruct the path into silo/dataset (if possible)
+            silo, dataset_id = path.split("/", 1)
+        else:
+            silo = path
+            
+        return silo, dataset_id, accept_parameters
+    
+    # FIXME: we want to get rid of this method in favour of interpret_path
     def interpret_statement_path(self, path):
         accept_parameters = None
         if path.endswith("rdf"):
