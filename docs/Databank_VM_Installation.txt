@@ -1,7 +1,7 @@
 Databank VM Setup
---------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------
 I. Virtual machine details
---------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------
 Ubuntu 10.04.1 32 bit i386
 512MB RAM
 8GB Harddrive (all of hard disk not allocated at the time of creation)
@@ -19,9 +19,9 @@ No automatic updates
 No predefined software
 Install Grub boot loader to master boot record
 
---------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------
 II. Packages to be Installed
---------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------
     sudo apt-get install build-essential
     sudo vim /etc/apt/sources.list  
          add  the following repository to the list
@@ -125,9 +125,9 @@ Pulling Recordsilo and Databank from github
     
     /opt/RDFDatabank is the root directory running the databank instance. You can move this to any other place of your choice.
 
---------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------
 III. Customizing Databank to your environment
---------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------
 Configure your Pylons environment - edit the production.ini file
 In the file production.ini, edit the folllowing:
     email_to = your_email_address    
@@ -156,33 +156,29 @@ In the file production.ini, edit the folllowing:
     Change the default values of publisher, rights and license. these are treated as text strings and are currently used in the manifest.rdf. 
     The license and rights information can be overwritten 
 
---------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------
 IV. Create the main admin user to access Databank
+------------------------------------------------------------------------------------------------------     
+Create a file 'passwd' in the root directory of RDFDatabank using 'htpasswd' and add a user to the passwd file.
+OR copy the file passwd-default to passwd
 
-TODO: This section uses htpasswd and a python file to manage user groups and roles.
-This would best be replaced by a DB lookup or similar.
---------------------------------------------------------------------------------
-1. Create a file 'passwd' in the root directory of RDFDatabank using 'htpasswd' and add a user to the passwd file.
-   OR copy the file passwd-default to passwd
+The passwd-default file has two users whose username, password are as given below. 
+    admin, test
+    sandbox_user, sandbox
+Please note, these user accounts are just for demonstration and would have to be changed for a production instance.
 
-   The passwd-default file has users whose username, password and roles are as given in the file rdfdatabank/tests/userRolesForTesting.txt. 
-   Please note, these user accounts are just for demonstration and would have to be changed for a production instance.
+To create the pssswd file
+    cd RDFDatabank/
+    htpasswd -c passwd admin
 
-   To create a new pssswd file with the username 'admin'
-     cd RDFDatabank/
-     htpasswd -c passwd admin
+ [enter admin password]   
 
-     [enter admin password]   
-
-2. Create and add data about the user 'admin' to the file rdfdatabank/config/users.py 
-   OR copy the file rdfdatabank/config/users-default.py to rdfdatabank/config/users-.py.
-
-   Adding user data to the file users.py:
-     Currently, you need to create a file called 'users.py' in rdfdatabank/config/ 
+Create and add data to the file rdfdatabank/config/users.py.
+    You would need to create a file called 'users.py' in add data for the main admin user (added earlier into htpasswd) by hand currently.
+OR copy the file users-default.py to rdfdatabank/config/users.py
     
-     To populate the file with the data for each of the users you had added into the passwd file,
-     The data to add should look like this
-    
+If creating the users.py file:
+    The data to add should look like this
 #-*- coding: utf-8 -*-
 _USERS = {
     'username': {
@@ -193,20 +189,22 @@ _USERS = {
     }
 }
 
-     Replace 'username' with the username you used when adding the user using htpasswd
-     Replace 'Your first name' with your first name
-     Replace 'Your last name' with your last name
+    Replace 'username' with the username you used when adding a user using htpasswd
+    Replace 'Your first name' with your first name
+    Replace 'Your last name' with your last name
 
-     The key 'owner' should contain the names of all the silos the user has access to separated by a comma, 
-     or '*' indicating the user has access to all silos
+    The key 'owner' should contain the names of all the silos the user has access to separated by a comma, 
+    or '*' indicating the user has access to all silos
     
-     Examples for owner:
+    Examples for owner:
         'owner': '*',
         'owner': 'my_first_silo,sandbox,my_second_silo',  
 
---------------------------------------------------------------------------------
+    The file has a variable _USERS used by ./rdfdatabank/lib/ident_md.py which would best be replaced by a DB lookup or similar. 
+
+------------------------------------------------------------------------------------------------------
 V. Integrate Databank with Datacite, for minting DOIs (this section is optional)
---------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------
 If you want to integrate Databank with Datacite for minting DOIs for each of the data-packages, then you would need to do the following:
 
 Create a file called doi_config.py which has all of the authentication information given to you by Datacite. Copy the lines below and 
@@ -240,9 +238,9 @@ class OxDataciteDoi():
         self.endpoint_path_doi = "/doi"
         self.endpoint_path_metadata = "/metadata"
 
---------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------
 VI. Integrate Pylons with Apache
---------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------
 1. Edit the file dispatch.wsgi 
     Note: you only need to do this step if the root directory running the databank instance is not /opt/RDFDatabank)
     In the mod_wsgi/dispatch.wsgi file, edit the location of your databank instance. 
@@ -264,17 +262,17 @@ VI. Integrate Pylons with Apache
     sudo a2enmod wsgi
     sudo a2ensite databank_wsgi
     
---------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------
 VII. Setup SOLR
---------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------
 Copy the solr schema file from docs into your solr conf
     sudo /etc/init.d/tomcat6 stop
     sudo cp /opt/RDFDatabank/docs/solr_config/conf/schema.xml /etc/solr/conf/
     sudo /etc/init.d/tomcat6 start
 
---------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------
 VIII. Making sure all of the needed folders are available and apache has access to all the needed parts
---------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------
 Apache runs as user www-data. Make sure the user www-data is able to read write to the following locations
     /opt/RDFDatabank
     /silos (create if not available)
@@ -294,9 +292,9 @@ Create a folder called databank in /var/log/databank and change it's owner and p
     sudo chown -R www-data:demoSystemUser /var/log/databank
     sudo chmod -R 775 /var/log/databank
 
---------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------
 IX. Test your Pylons installation 
---------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------
 Restart apache
   sudo /etc/init.d/apache2 restart
   
@@ -307,9 +305,9 @@ If you see an error message look at the logs at /var/log/apache2/databank-error.
 If you have problems with authorization, you can change the who.log_level to debug in the production.ini file 
 and restart apache so you can check the logs to see what's happening. The who.log_file is available at /var/log/databank/who.log
 
---------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------
 X. Run the test code and make sure all the tests pass
---------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------
 The test code is located at /opt/RDFDatabank/rdfdatabank/tests
 
 There are two test files - TestSubmission.py and TestSubmission_submitter.py
@@ -334,9 +332,9 @@ To run the tests
     python TestSubmission.py              (to run the tests in TestSubmission.py)
     python TestSubmission_submitter.py    (to run the tests in TestSubmission_submitter.py)
 
---------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------  
 B. Running Pylons from the command line in debug mode and dumping logs to stdout
---------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------
 If you would like to run Pylons in debug mode from the command line and dump all of the log messages to stdout, stop apache and start paster from the command line.
 
 Open the file development.ini and make the changes as in section III (except may be who.log_file). 
@@ -411,4 +409,4 @@ The commands to run pylons from the command line
     sudo /etc/init.d/apache2 stop
     sudo paster serve development.ini
     
---------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------
