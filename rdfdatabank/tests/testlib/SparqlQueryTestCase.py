@@ -1,9 +1,29 @@
 #!/usr/bin/python
-# $Id:  $
+"""
+Copyright (c) 2012 University of Oxford
+
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of this software and associated documentation files (the
+"Software"), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, --INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+"""
+
 """
 HTTP and SPARQL query test case support functions 
-
-$Rev: $
 """
 
 import os, os.path
@@ -145,15 +165,18 @@ class SparqlQueryTestCase(unittest.TestCase):
             return ""
 
     def getRequestUri(self, rel):
-        #return "http://databank.ora.ox.ac.uk"+self.getRequestPath(rel)
-        #return "http://"+self._endpointhost+self.getRequestPath(rel)
+        return "http://"+self._endpointhost+self.getRequestPath(rel)
+
+    def getManifestUri(self, rel):
         return self._manifesturiroot+self.getRequestPath(rel)
 
     def doRequest(self, command, resource, reqdata=None, reqheaders={}, expect_status=200, expect_reason="OK"):
         logger.debug(command+" "+self.getRequestUri(resource))
-        if self._endpointuser:
-            auth = base64.encodestring("%s:%s" % (self._endpointuser, self._endpointpass)).strip()
-            reqheaders["Authorization"] = "Basic %s" % auth
+        #if self._endpointuser:
+        #    auth = base64.encodestring("%s:%s" % (self._endpointuser, self._endpointpass)).strip()
+        #    reqheaders["Authorization"] = "Basic %s" % auth
+        auth = base64.encodestring("%s:%s" % (self._endpointuser, self._endpointpass)).strip()
+        reqheaders["Authorization"] = "Basic %s" % auth
         hc   = httplib.HTTPConnection(self._endpointhost)
         #hc   = httplib.HTTPSConnection(self._endpointhost)
         path = self.getRequestPath(resource)
@@ -173,9 +196,9 @@ class SparqlQueryTestCase(unittest.TestCase):
             else:
                 response.read()  # Seems to be needed to free up connection for new request
         logger.debug("Status: %i %s" % (response.status, response.reason))
+
         if expect_status != "*": self.assertEqual(response.status, expect_status)
-        if expect_status == 201: 
-            self.assertTrue(response.getheader('Content-Location', None))
+        if expect_status == 201: self.assertTrue(response.getheader('Content-Location', None))
         if expect_reason != "*": self.assertEqual(response.reason, expect_reason)
         responsedata = response.read()
         hc.close()

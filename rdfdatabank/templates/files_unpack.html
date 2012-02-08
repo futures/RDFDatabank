@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 % if c.zipfile:
-<form style="margin:0px;" method="POST" action="/${c.silo_name}/items/${c.id}">
+<form style="margin:0px;" method="POST" action="/${c.silo_name}/items/${c.id}" accept-charset="UTF-8">
 <table style="margin:0px 0px 5px 0px; padding: 0px 5px 0px 0px;"><tr>
 <% 
 c.disp = c.zipfile.strip().strip('/').split('/')[-1]

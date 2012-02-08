@@ -1,6 +1,9 @@
+# -*- coding: utf-8 -*-
+"""
 #Downloaded from http://code.activestate.com/recipes/576918/
 #Created by Michael Fogleman 
 #Short URL Generator
+"""
 
 #DEFAULT_ALPHABET = 'JedR8LNFY2j6MrhkBSADUyfP5amuH9xQCX4VqbgpsGtnW7vc3TwKE'
 #DEFAULT_BLOCK_SIZE = 22
@@ -79,5 +82,5 @@ if __name__ == '__main__':
         assert a == e
         assert b == d
         c = (' ' * (7 - len(c))) + c
-        print '%6d %12d %s %12d %6d' % (a, b, c, d, e)
+        #print '%6d %12d %s %12d %6d' % (a, b, c, d, e)
         

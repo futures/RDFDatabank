@@ -12,25 +12,42 @@ c.current = c.id
 
 <h1>Dataset ${c.id}</h1>
 <div id="editor_metadata_view">
+
+<!-- Embargo Information -->
+% if c.embargos:
+<h3><b>Embargo Information</b></h3>
+%   if c.embargos[c.current][0] not in ['False', 'false', 0, False]:
+<p>Embargoed: True</p>
+<p>Embargoed until: ${c.embargos[c.current][1]}</p>
+%   else:
+<p>Embargoed: False</p>
+%   endif
+% endif
+
 <!-- View Information -->
-
-<h2>
 % if c.editor:
+  <div id="editor_view">
+  % if c.view == 'editor':
+    Editor view 
+  % else:
+    User view 
+  % endif
+  % if c.version: 
+    <br /> Change view : 
+    <a href="/${c.silo_name}/datasets/${c.id}?version=${c.version}&view=editor">Editor</a> | 
+    <a href="/${c.silo_name}/datasets/${c.id}?version=${c.version}&view=user">User</a></p>
+  % else:
+    <br />Change view : 
+    <a href="/${c.silo_name}/datasets/${c.id}?view=editor">Editor</a> | 
+    <a href="/${c.silo_name}/datasets/${c.id}?view=user">User</a></p>
+  % endif
+  </div>
+% endif
 
-%   if c.view == 'editor':
-Editor view
-%   else:
-user view
-
-%   endif
-</h2>
-%   if c.version: 
-<p>Change view : <a href="/${c.silo_name}/datasets/${c.id}/version${c.version}?view=editor">Editor</a> | <a href="/${c.silo_name}/datasets/${c.id}/version${c.version}?view=user">User</a></p>
-%   else:
-<p>Change view : as <a href="/${c.silo_name}/datasets/${c.id}?view=editor">Editor</a> | <a href="/${c.silo_name}/datasets/${c.id}?view=user">User</a></p>
-%   endif
-%endif
-
+<div class="datapackage">
+% if c.version:
+  <h3>Information for version ${c.version} of the dataset</h3>
+% endif
 <!--
 <dl>
  <dt>Item's JSON state (Accept: application/json):</dt>
@@ -38,70 +55,62 @@ user view
 -->
 
 <!-- List of Files -->
-<dl>
-% if c.editor: 
-<%include file="/part_list.html"/>
-% elif c.embargos[c.current][0] in ['False', 'false', 0, False]:
-<%include file="/part_list_display.html"/>
+% if c.show_files:
+  % if c.editor:
+    <%include file="/part_list.html"/>
+  % else:
+    <%include file="/part_list_display.html"/>
+  % endif
 % endif
-</dl>
 
 <!-- Read Me Information -->
 % if c.readme_text:
 <%include file="/readme_section.html"/>
 % endif
 
-<!-- Embargo Information -->
-<dl>
-% if c.embargos:
-<dt>Embargo Information</dt>
-%   if c.embargos[c.current][0] not in ['False', 'false', 0, False]:
-<dd>Embargoed: True</dd>
-<dd>Embargoed until: ${c.embargos[c.current][1]}</dd>
-%   else:
-<dd>Embargoed: False</dd>
-%   endif
-% endif
-</dl>
-
 <!-- RDF Manifest -->
 <dl>
-<dt>Item's RDF Manifest (Accept: most RDF mimetypes):</dt>
-<dd><div id="manifest"><pre>${c.manifest_pretty}</pre></div></dd>
+<dt><b>Item's RDF Manifest (Accept: most RDF mimetypes):</b></dt>
+<dd><pre>${c.manifest_pretty}</pre></dd>
 </dl>
+
+</div>
 
 <!-- DISPLAYED FOR EDITOR ONLY -->
 <!-- State Information -->
-<dl>
 % if c.editor:
-<div class="button"><a class="callToAction" href="/${c.silo_name}/states/${c.id}">View state information</a></div>
-</dl>
-<!-- Change Embargo Information -->
-% if c.view == 'editor':
-<dl>
-<dt>Change Embargo</dt>
-<dd><%include file="/embargo_form.html"/></dd>
-</dl>
-<!-- Change RDF Manifest -->
-<dl>
-<dt>Add metadata to the RDF Manifest</dt>
-<dd><%include file="/rdf_manifest_form.html"/></dd>
-</dl>
-<!-- Upload File -->
-<%include file="/file_upload.html"/>
-<!-- Unpack zipfiles -->
-%   if c.zipfiles:
-<dl>
-<dt> List of item unpack endpoints:</dt>
-%     for zf in c.zipfiles:
-<%
-c.zipfile = zf
-c.newid = c.zipfiles[zf]
-%>
-<%include file="/files_unpack.html"/>
-%     endfor
-</dl>
-%   endif
+  <div class="editor">
+  <p><b><a href="/${c.silo_name}/states/${c.id}">View state information</a></b></p>
+  % if c.view == 'editor':
+    <dl>
+    <!-- Change Embargo Information -->
+    <dt><b>Change Embargo</b></dt>
+    <dd>
+    <%include file="/embargo_form.html"/>
+    <div class="indent">Embargo state: True - only those logged in and with edit rights can see item. False - Anyone can GET the item and it's files.</div>
+    <div class="indent">Embargo date: Aim is for ISO8601 dates to provide embargo trigger events. Currently unused, unvalidated and unparsed.</div>
+    </dd>
+    <!-- Change RDF Manifest -->
+    <dt><b>Add metadata to the RDF Manifest:</b></dt>
+    <dd><%include file="/rdf_manifest_form.html"/></dd>
+    </dl>
+    <!-- Upload File -->
+    <%include file="/file_upload.html"/>
+    <!-- Unpack zipfiles -->
+    % if c.zipfiles:
+      <h3> List of item unpack endpoints:</h3>
+      <ul class="unpack_endpoints">
+      % for zf in c.zipfiles:
+        <%
+        c.zipfile = zf
+        c.newid = c.zipfiles[zf]
+        %>
+       <li><%include file="/files_unpack.html"/></li>
+      % endfor
+      </ul>
+    % endif
+  % endif
+  </div>
 % endif
-% endif
+
 </div>

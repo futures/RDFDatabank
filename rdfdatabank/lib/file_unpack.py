@@ -1,8 +1,31 @@
+# -*- coding: utf-8 -*-
+"""
+Copyright (c) 2012 University of Oxford
+
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of this software and associated documentation files (the
+"Software"), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, --INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+"""
+
 import subprocess
 from threading import Thread
 from datetime import datetime, timedelta
-import os
-from redis import Redis
+import os, shutil
 from uuid import uuid4
 from rdflib import URIRef, Literal
 from rdfdatabank.lib.utils import create_new, munge_manifest, test_rdf
@@ -18,9 +41,13 @@ class BadZipfile(Exception):
     """Cannot open zipfile using commandline tool 'unzip' to target directory"""
    
 def check_file_mimetype(real_filepath, mimetype):
+    if os.path.isdir(real_filepath):
+        return False
     if os.path.islink(real_filepath):
         real_filepath = os.readlink(real_filepath)
-    p = subprocess.Popen("file -ib %s" %(real_filepath), shell=True, stdout=subprocess.PIPE)
+    if not os.path.isfile(real_filepath):
+        return False
+    p = subprocess.Popen("file -ib '%s'" %(real_filepath), shell=True, stdout=subprocess.PIPE)
     output_file = p.stdout
     output_str = output_file.read()
     if mimetype in output_str:
@@ -28,12 +55,15 @@ def check_file_mimetype(real_filepath, mimetype):
     else:
         return False
         
-def get_zipfiles_in_dataset_old(dataset):
+def get_zipfiles_in_dataset(dataset):
     derivative = dataset.list_rdf_objects("*", "ore:aggregates")
-    #print "derivative values", derivative.values()[0]
     zipfiles = {}
-    if derivative and derivative.values() and derivative.values()[0]:
-        for file_uri in derivative.values()[0]:
+    #if derivative and derivative.values() and derivative.values()[0]:
+    if derivative:
+        #for file_uri in derivative.values()[0]:
+        for file_uri in derivative:
+            if not file_uri.lower().endswith('.zip'):
+                continue
             filepath = file_uri[len(dataset.uri)+1:]
             real_filepath = dataset.to_dirpath(filepath)
             if os.path.islink(real_filepath):
@@ -43,21 +73,6 @@ def get_zipfiles_in_dataset_old(dataset):
                 zipfiles[filepath]="%s-%s"%(dataset.item_id, fn)
     return zipfiles
 
-def get_zipfiles_in_dataset(dataset):
-    p = subprocess.Popen("""file -iL `find %s -name '*.zip'` | grep  "application/zip" | awk -F":" '{print $1}'""" %dataset.to_dirpath(), shell=True, stdout=subprocess.PIPE)
-    stdout_value = p.communicate()[0]
-    zipfiles = {}
-    if p.returncode == 0:
-        files = stdout_value.split('\n')
-        for z in files:
-            if not len(z.strip()) > 0:
-                continue
-            filepath = z.replace(dataset.to_dirpath(), '').strip(' ').strip('/')
-            (head, fn) = os.path.split(z)
-            (fn, ext) = os.path.splitext(fn)
-            zipfiles[filepath]="%s-%s"%(dataset.item_id, fn)
-    return zipfiles
-        
 def store_zipfile(silo, target_item_uri, POSTED_file, ident):
     zipfile_id = get_next_zipfile_id(silo.state['storage_dir'])
     while(silo.exists("%s%s" % (zipfile_root, zipfile_id))):
@@ -148,6 +163,9 @@ def unpack_zip_item(target_dataset, current_dataset, zip_item, silo, ident):
     if os.path.islink(filepath):
         filepath = os.readlink(filepath)
 
+    emb = target_dataset.metadata.get('embargoed')
+    emb_until = target_dataset.metadata.get('embargoed_until')
+
     # -- Step 1 -----------------------------
     unpacked_dir = unzip_file(filepath)
 
@@ -161,15 +179,14 @@ def unpack_zip_item(target_dataset, current_dataset, zip_item, silo, ident):
     os.path.walk(unpacked_dir,get_items_in_dir,items_list)
 
     # -- Step 3 -----------------------------
-    manifest_str = None
+    mani_file = None
     #Read manifest    
     for i in items_list:
         if 'manifest.rdf' in i and os.path.isfile(i):
-            F = open(i, 'r')
-            manifest_str = F.read()
-            F.close()
+            mani_file = os.path.join('/tmp', uuid4().hex)
+            shutil.move(i, mani_file)
             items_list.remove(i)
-            os.remove(i)
+            #os.remove(i)
             break
 
     # -- Step 4 -----------------------------
@@ -182,9 +199,15 @@ def unpack_zip_item(target_dataset, current_dataset, zip_item, silo, ident):
     target_dataset.add_triple(target_dataset.uri, u"rdf:type", "oxds:Grouping")
     target_dataset.add_triple(target_dataset.uri, "dcterms:isVersionOf", file_uri)
     #TODO: Adding the following metadata again as moving directory deletes all this information. Need to find a better way
-    embargoed_until_date = (datetime.now() + timedelta(days=365*70)).isoformat()
-    target_dataset.add_triple(target_dataset.uri, u"oxds:isEmbargoed", 'True')
-    target_dataset.add_triple(target_dataset.uri, u"oxds:embargoedUntil", embargoed_until_date)
+    if emb:
+        target_dataset.add_triple(target_dataset.uri, u"oxds:isEmbargoed", 'True')
+        if emb_until:
+            target_dataset.add_triple(target_dataset.uri, u"oxds:embargoedUntil", emb_until)
+    else:
+        target_dataset.add_triple(target_dataset.uri, u"oxds:isEmbargoed", 'False')
+    #The embargo
+    #embargoed_until_date = (datetime.now() + timedelta(days=365*70)).isoformat()
+    #target_dataset.add_triple(target_dataset.uri, u"oxds:embargoedUntil", embargoed_until_date)
     target_dataset.add_triple(target_dataset.uri, u"dcterms:identifier", target_dataset.item_id)
     target_dataset.add_triple(target_dataset.uri, u"dcterms:mediator", ident)
     target_dataset.add_triple(target_dataset.uri, u"dcterms:publisher", ag.publisher)
@@ -214,9 +237,10 @@ def unpack_zip_item(target_dataset, current_dataset, zip_item, silo, ident):
     # -- Step 6 -----------------------------
     #Munge rdf
     #TODO: If manifest is not well formed rdf - inform user. Currently just ignored.
-    if manifest_str and test_rdf(manifest_str):
-        munge_manifest(manifest_str, target_dataset)
-     
+    if mani_file and os.path.isfile(mani_file) and test_rdf(mani_file):
+        munge_manifest(mani_file, target_dataset)
+        os.remove(mani_file)
+        
     # -- Step 7 -----------------------------
     target_dataset.sync()
     target_dataset.sync()
@@ -254,15 +278,14 @@ class unpack_zip_item(Thread):
         os.path.walk(unpacked_dir,get_items_in_dir,items_list)
 
         # -- Step 3 -----------------------------
-        manifest_str = None
+        mani_file = None
         #Read manifest    
         for i in items_list:
             if 'manifest.rdf' in i and os.path.isfile(i):
-                F = open(i, 'r')
-                manifest_str = F.read()
-                F.close()
+                mani_file = os.path.join('/tmp', uuid4().hex)
+                shutil.move(i, mani_file)
                 items_list.remove(i)
-                os.remove(i)
+                #os.remove(i)
                 break
     
         # -- Step 4 -----------------------------
@@ -299,8 +322,8 @@ class unpack_zip_item(Thread):
         # -- Step 6 -----------------------------
         #Munge rdf
         #TODO: If manifest is not well formed rdf - inform user. Currently just ignored.
-        if manifest_str and test_rdf(manifest_str):
-            munge_manifest(manifest_str, self.target_dataset, manifest_type='http://vocab.ox.ac.uk/dataset/schema#Grouping')
+        if mani_file and os.path.isfile(mani_file) and test_rdf(mani_file):
+            munge_manifest(mani_file, self.target_dataset, manifest_type='http://vocab.ox.ac.uk/dataset/schema#Grouping')
          
         # -- Step 7 -----------------------------
         #Delete the status 

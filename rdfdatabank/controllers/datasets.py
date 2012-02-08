@@ -1,15 +1,41 @@
+#-*- coding: utf-8 -*-
+"""
+Copyright (c) 2012 University of Oxford
+
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of this software and associated documentation files (the
+"Software"), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, --INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+"""
+
 import logging
-import re, os, shutil
+import re, os, shutil, codecs
 import simplejson
 from datetime import datetime, timedelta
+from dateutil.relativedelta import *
+from dateutil.parser import parse
 import time
-
+from uuid import uuid4
 from pylons import request, response, session, tmpl_context as c, url, app_globals as ag
-from pylons.controllers.util import abort, redirect_to
+from pylons.controllers.util import abort, redirect
 from pylons.decorators import rest
 from paste.fileapp import FileApp
 from rdfdatabank.lib.base import BaseController, render
-from rdfdatabank.lib.utils import create_new, is_embargoed, get_readme_text, test_rdf, munge_manifest, serialisable_stat, allowable_id2, get_rdf_template
+from rdfdatabank.lib.utils import create_new, is_embargoed, get_readme_text, test_rdf, munge_manifest, serialisable_stat, allowable_id2, get_embargo_values, get_rdf_template
 from rdfdatabank.lib.file_unpack import get_zipfiles_in_dataset
 from rdfdatabank.lib.conneg import MimeType as MT, parse as conneg_parse
 
@@ -20,26 +46,41 @@ log = logging.getLogger(__name__)
 class DatasetsController(BaseController):      
     @rest.restrict('GET', 'POST')
     def siloview(self, silo):
-        if not request.environ.get('repoze.who.identity'):
-            abort(401, "Not Authorised")
         if not ag.granary.issilo(silo):
             abort(404)
+        c.silo_name = silo
+        granary_list = ag.granary.silos
+        #f = open('/tmp/ds.log', 'a')
+        #f.write(str(granary_list))
+        #f.close()
         ident = request.environ.get('repoze.who.identity')
         c.ident = ident
-        granary_list = ag.granary.silos
-        silos = ag.authz(granary_list, ident)
-        if silo not in silos:
-            abort(403, "Forbidden")
-        
-        c.silo_name = silo
-        c_silo = ag.granary.get_rdf_silo(silo)
-        
+
         http_method = request.environ['REQUEST_METHOD']
+
         if http_method == "GET":
+            c.editor = False
+            if ag.metadata_embargoed:
+                if not ident:
+                    abort(401, "Not Authorised")
+                silos = ag.authz(granary_list, ident)
+                if silo not in silos:
+                    abort(403, "Forbidden")
+                c.editor = True
+            else:
+                if ident:
+                    silos = ag.authz(granary_list, ident)
+                    if silo in silos:
+                        c.editor = True
+                 
+            #TODO: Get this information from SOLR, not the granary OR Do not get the embargo information, as that is what fails
+            c_silo = ag.granary.get_rdf_silo(silo)
             c.embargos = {}
             for item in c_silo.list_items():
-                c.embargos[item] = is_embargoed(c_silo, item)
-            #c.items = c_silo.list_items()
+                try:
+                    c.embargos[item] = is_embargoed(c_silo, item)
+                except:
+                    c.embargos[item] = None
             c.items = c.embargos.keys()
             # conneg return
             accept_list = None
@@ -66,57 +107,71 @@ class DatasetsController(BaseController):
             #Whoops nothing satisfies - return text/html            
             return render('/siloview.html')
         elif http_method == "POST":
+            if not ident:
+                abort(401, "Not Authorised")
+
+            silos = ag.authz(granary_list, ident)
+            if silo not in silos:
+                abort(403, "Forbidden")
             params = request.POST
-            if params.has_key("id"):
-                if c_silo.exists(params['id']):
-                    response.content_type = "text/plain"
-                    response.status_int = 409
-                    response.status = "409 Conflict: Dataset Already Exists"
-                    return "Dataset Already Exists"
-                else:
-                    # Supported params:
-                    # id, title, embargoed, embargoed_until, embargo_days_from_now
-                    id = params['id']
-                    if not allowable_id2(id):
-                        response.content_type = "text/plain"
-                        response.status_int = 403
-                        response.status = "403 Forbidden"
-                        return "Dataset name can contain only the following characters - %s and has to be more than 1 character"%ag.naming_rule
-                    del params['id']
-                    item = create_new(c_silo, id, ident['repoze.who.userid'], **params)
-                    
-                    # Broadcast change as message
-                    ag.b.creation(silo, id, ident=ident['repoze.who.userid'])
-                    
-                    # conneg return
-                    accept_list = None
-                    if 'HTTP_ACCEPT' in request.environ:
-                        try:
-                            accept_list = conneg_parse(request.environ['HTTP_ACCEPT'])
-                        except:
-                            accept_list= [MT("text", "html")]
-                    if not accept_list:
-                        accept_list= [MT("text", "html")]
-                    mimetype = accept_list.pop(0)
-                    while(mimetype):
-                        if str(mimetype).lower() in ["text/html", "text/xhtml"]:
-                            redirect_to(controller="datasets", action="datasetview", silo=silo, id=id)
-                        elif str(mimetype).lower() in ["text/plain", "application/json"]:
-                            response.content_type = "text/plain"
-                            response.status_int = 201
-                            response.status = "201 Created"
-                            response.headers["Content-Location"] = url(controller="datasets", action="datasetview", silo=silo, id=id)
-                            return "201 Created"
-                        try:
-                            mimetype = accept_list.pop(0)
-                        except IndexError:
-                            mimetype = None
-                    # Whoops - nothing satisfies - return text/plain
+
+            if not params.has_key("id"):
+                response.content_type = "text/plain"
+                response.status_int = 400
+                response.status = "400 Bad Request: Parameter 'id' is not available"
+                return "Parameter 'id' is not available"
+                
+            c_silo = ag.granary.get_rdf_silo(silo)        
+            if c_silo.exists(params['id']):
+                response.content_type = "text/plain"
+                response.status_int = 409
+                response.status = "409 Conflict: Dataset Already Exists"
+                return "Dataset Already Exists"
+
+            # Supported params:
+            # id, title, embargoed, embargoed_until, embargo_days_from_now
+            id = params['id']
+            if not allowable_id2(id):
+                response.content_type = "text/plain"
+                response.status_int = 400
+                response.status = "400 Bad request. Dataset name not valid"
+                return "Dataset name can contain only the following characters - %s and has to be more than 1 character"%ag.naming_rule
+
+            del params['id']
+            item = create_new(c_silo, id, ident['repoze.who.userid'], **params)
+                   
+            # Broadcast change as message
+            ag.b.creation(silo, id, ident=ident['repoze.who.userid'])
+                 
+            # conneg return
+            accept_list = None
+            if 'HTTP_ACCEPT' in request.environ:
+                try:
+                    accept_list = conneg_parse(request.environ['HTTP_ACCEPT'])
+                except:
+                    accept_list= [MT("text", "html")]
+            if not accept_list:
+                accept_list= [MT("text", "html")]
+            mimetype = accept_list.pop(0)
+            while(mimetype):
+                if str(mimetype).lower() in ["text/html", "text/xhtml"]:
+                    redirect(url(controller="datasets", action="datasetview", silo=silo, id=id))
+                elif str(mimetype).lower() in ["text/plain", "application/json"]:
                     response.content_type = "text/plain"
                     response.status_int = 201
-                    response.headers["Content-Location"] = url(controller="datasets", action="datasetview", silo=silo, id=id)
                     response.status = "201 Created"
+                    response.headers["Content-Location"] = url(controller="datasets", action="datasetview", silo=silo, id=id)
                     return "201 Created"
+                try:
+                    mimetype = accept_list.pop(0)
+                except IndexError:
+                    mimetype = None
+            # Whoops - nothing satisfies - return text/plain
+            response.content_type = "text/plain"
+            response.status_int = 201
+            response.headers["Content-Location"] = url(controller="datasets", action="datasetview", silo=silo, id=id)
+            response.status = "201 Created"
+            return "201 Created"
                     
     @rest.restrict('GET', 'POST', 'DELETE')
     def datasetview(self, silo, id):       
@@ -128,44 +183,84 @@ class DatasetsController(BaseController):
 
         http_method = request.environ['REQUEST_METHOD']
 
+        ident = request.environ.get('repoze.who.identity')  
+        c.ident = ident
+        granary_list = ag.granary.silos
         c_silo = ag.granary.get_rdf_silo(silo)
-        
-        c.editor = False
+
         c.version = None
-                
+        c.editor = False
+        
         if not (http_method == "GET"):
             #identity management of item 
             if not request.environ.get('repoze.who.identity'):
                 abort(401, "Not Authorised")
-            ident = request.environ.get('repoze.who.identity')  
-            c.ident = ident
-            granary_list = ag.granary.silos
             silos = ag.authz(granary_list, ident)      
             if silo not in silos:
                 abort(403, "Forbidden")
-            c.editor = silo in silos
         elif http_method == "GET":
             if not c_silo.exists(id):
                 abort(404)
-            item = c_silo.get_item(id)
+
             embargoed = False
-            if item.metadata.get('embargoed') not in ["false", 0, False]:
-                embargoed = True
-            granary_list = ag.granary.silos
-            if embargoed:
-                if not request.environ.get('repoze.who.identity'):
-                    abort(401, "Not Authorised") 
-                ident = request.environ.get('repoze.who.identity')  
+            item = c_silo.get_item(id)
+
+            options = request.GET
+
+            currentversion = str(item.currentversion)
+            if 'version' in options:
+                if not options['version'] in item.manifest['versions']:
+                    abort(404)
+                c.version = str(options['version'])
+                if c.version and not c.version == currentversion:
+                    item.set_version_cursor(c.version)
+
+            creator = None
+            if item.manifest and item.manifest.state and 'metadata' in item.manifest.state and item.manifest.state['metadata'] and \
+                'createdby' in item.manifest.state['metadata'] and item.manifest.state['metadata']['createdby']:
+                creator = item.manifest.state['metadata']['createdby']
+
+            if ag.metadata_embargoed:
+                if not ident:
+                    abort(401, "Not Authorised")
                 silos = ag.authz(granary_list, ident)      
                 if silo not in silos:
                     abort(403, "Forbidden")
-                c.editor = silo in silos
-            ident = request.environ.get('repoze.who.identity')  
-            c.ident = ident
-            if ident:
+                if ident['repoze.who.userid'] == creator or ident.get('role') in ["admin", "manager"]:
+                    c.editor = True
+            elif item.metadata.get('embargoed') not in ["false", 0, False]:
+                #TODO: This will always provide the embargo information for the latest version.
+                # The embargo status should always reflect the latest version, but should the embargo information displayed be that of the vesion???
+                embargoed = True
+                if ident:
+                    silos = ag.authz(granary_list, ident)      
+                    if silo in silos:
+                        if ident['repoze.who.userid'] == creator or ident.get('role') in ["admin", "manager"]:
+                            c.editor = True
+            elif ident:
                 silos = ag.authz(granary_list, ident)
-                c.editor = silo in silos
-        
+                if silo in silos:
+                    if ident['repoze.who.userid'] == creator or ident.get('role') in ["admin", "manager"]:
+                        c.editor = True
+
+            
+            c.show_files = True
+            #Only the administrator, manager and creator can view embargoed files.
+            if embargoed and not c.editor:
+                c.show_files = False
+
+            #Display but do not edit previous versions of files, since preious versions are read only.
+            if c.version and not c.version == currentversion:
+                c.editor = False
+
+            # View options
+            if "view" in options and c.editor:
+                c.view = options['view']
+            elif c.editor:
+                c.view = 'editor'
+            else:
+                c.view = 'user'
+
         # Method determination
         if http_method == "GET":
             c.embargos = {}
@@ -182,15 +277,6 @@ class DatasetsController(BaseController):
             #if item.manifest:
             #    state = item.manifest.state
                     
-            # View options
-            options = request.GET
-            if "view" in options:
-                c.view = options['view']
-            elif c.editor:
-                c.view = 'editor'
-            else:
-                c.view = 'user'
-
             # conneg:
             accept_list = None
             if 'HTTP_ACCEPT' in request.environ:
@@ -210,6 +296,7 @@ class DatasetsController(BaseController):
                     returndata = {}
                     returndata['embargos'] = c.embargos
                     returndata['view'] = c.view
+                    returndata['show_files'] = c.show_files
                     returndata['editor'] = c.editor
                     returndata['parts'] = {}
                     for part in c.parts:
@@ -218,6 +305,8 @@ class DatasetsController(BaseController):
                     returndata['manifest_pretty'] = c.manifest_pretty
                     returndata['manifest'] = c.manifest
                     returndata['zipfiles'] = c.zipfiles
+                    if c.version:
+                        returndata['version'] = c.version
                     #items['state'] = state
                     response.status_int = 200
                     response.status = "200 OK"
@@ -249,13 +338,14 @@ class DatasetsController(BaseController):
                     mimetype = None
             #Whoops - nothing staisfies - default to text/html
             return render('/datasetview.html')
-        elif http_method == "POST" and c.editor:
+        elif http_method == "POST":
             params = request.POST
             if not c_silo.exists(id):
+                #Create new data-package. Any authorized user can do this
                 if not allowable_id2(id):
                     response.content_type = "text/plain"
-                    response.status_int = 403
-                    response.status = "403 Forbidden"
+                    response.status_int = 400
+                    response.status = "400 Bad request. Dataset name not valid"
                     return "Dataset name can contain only the following characters - %s and has to be more than 1 character"%ag.naming_rule
                 if 'id' in params.keys():
                     del params['id']
@@ -277,7 +367,7 @@ class DatasetsController(BaseController):
                 while(mimetype):
                     if str(mimetype).lower() in ["text/html", "text/xhtml"]:
                         # probably a browser - redirect to newly created dataset
-                        redirect_to(controller="datasets", action="datasetview", silo=silo, id=id)
+                        redirect(url(controller="datasets", action="datasetview", silo=silo, id=id))
                     elif str(mimetype).lower() in ["text/plain", "application/json"]:
                         response.content_type = "text/plain"
                         response.status_int = 201
@@ -294,42 +384,49 @@ class DatasetsController(BaseController):
                 response.headers["Content-Location"] = url(controller="datasets", action="datasetview", silo=silo, id=id) 
                 response.status = "201 Created"
                 return "201 Created"
-            elif params.has_key('embargo_change') or params.has_key('embargoed'):
+            elif params.has_key('embargoed') and params['embargoed']:
                 item = c_silo.get_item(id)
+                creator = None
+                if item.manifest and item.manifest.state and 'metadata' in item.manifest.state and item.manifest.state['metadata'] and \
+                    'createdby' in item.manifest.state['metadata'] and item.manifest.state['metadata']['createdby']:
+                    creator = item.manifest.state['metadata']['createdby']
+                if not (ident['repoze.who.userid'] == creator or ident.get('role') in ["admin", "manager"]):
+                    abort(403)
+                if not params['embargoed'].lower() in ['true', 'false', '0', '1']:
+                    abort(400, "The value for embargoed has to be either 'True' or 'False'")
+
                 item.increment_version_delta(clone_previous_version=True, copy_filenames=['manifest.rdf'])
-                #if params.has_key('embargoed'):
-                if (params.has_key('embargo_change') and params.has_key('embargoed')) or \
-                   (params.has_key('embargoed') and params['embargoed'].lower() == 'true'):
-                    if params.has_key('embargoed_until') and params['embargoed_until']:
-                        embargoed_until_date = params['embargoed_until']
-                    elif params.has_key('embargo_days_from_now') and params['embargo_days_from_now']:
-                        embargoed_until_date = (datetime.now() + timedelta(days=params['embargo_days_from_now'])).isoformat()
-                    else:
-                        embargoed_until_date = (datetime.now() + timedelta(days=365*70)).isoformat()
-                    item.metadata['embargoed'] = True
-                    item.metadata['embargoed_until'] = embargoed_until_date
-                    item.del_triple(item.uri, u"oxds:isEmbargoed")
-                    item.del_triple(item.uri, u"oxds:embargoedUntil")
-                    item.add_triple(item.uri, u"oxds:isEmbargoed", 'True')
-                    item.add_triple(item.uri, u"oxds:embargoedUntil", embargoed_until_date)
+                if params.has_key('embargoed_until') and params['embargoed_until']:
+                    e, e_d = get_embargo_values(embargoed=params['embargoed'], embargoed_until=params['embargoed_until'])
+                elif params.has_key('embargo_days_from_now') and params['embargo_days_from_now']:
+                    e, e_d = get_embargo_values(embargoed=params['embargoed'], embargo_days_from_now=params['embargo_days_from_now'])
                 else:
-                    #if is_embargoed(c_silo, id)[0] == True:
+                    e, e_d = get_embargo_values(embargoed=params['embargoed'])
+                
+                item.metadata['embargoed_until'] = ''
+                item.del_triple(item.uri, u"oxds:isEmbargoed")
+                item.del_triple(item.uri, u"oxds:embargoedUntil")
+                ag.r.set("%s:%s:embargoed_until" % (c_silo.state['storage_dir'], id), ' ')
+
+                if e:
+                    item.metadata['embargoed'] = True
+                    item.add_triple(item.uri, u"oxds:isEmbargoed", 'True')
+                    ag.r.set("%s:%s:embargoed" % (c_silo.state['storage_dir'], id), True)
+                    if e_d:
+                        item.metadata['embargoed_until'] = e_d
+                        item.add_triple(item.uri, u"oxds:embargoedUntil", e_d)
+                        ag.r.set("%s:%s:embargoed_until" % (c_silo.state['storage_dir'], id), e_d)
+                else:
                     item.metadata['embargoed'] = False
-                    item.metadata['embargoed_until'] = ''
-                    item.del_triple(item.uri, u"oxds:isEmbargoed")
-                    item.del_triple(item.uri, u"oxds:embargoedUntil")
                     item.add_triple(item.uri, u"oxds:isEmbargoed", 'False')
+                    ag.r.set("%s:%s:embargoed" % (c_silo.state['storage_dir'], id), False)
+
                 item.del_triple(item.uri, u"dcterms:modified")
                 item.add_triple(item.uri, u"dcterms:modified", datetime.now())
                 item.del_triple(item.uri, u"oxds:currentVersion")
                 item.add_triple(item.uri, u"oxds:currentVersion", item.currentversion)
                 item.sync()
-                item.sync()
-                e, e_d = is_embargoed(c_silo, id, refresh=True)
-                
-                # Broadcast change as message
-                ag.b.embargo_change(silo, id, item.metadata['embargoed'], item.metadata['embargoed_until'], ident=ident['repoze.who.userid'])
-                
+
                 # conneg return
                 accept_list = None
                 if 'HTTP_ACCEPT' in request.environ:
@@ -342,7 +439,7 @@ class DatasetsController(BaseController):
                 mimetype = accept_list.pop(0)
                 while(mimetype):
                     if str(mimetype).lower() in ["text/html", "text/xhtml"]:
-                        redirect_to(controller="datasets", action="datasetview", id=id, silo=silo)
+                        redirect(url(controller="datasets", action="datasetview", id=id, silo=silo))
                     elif str(mimetype).lower() in ["text/plain", "application/json"]:
                         response.content_type = "text/plain"
                         response.status_int = 204
@@ -361,12 +458,22 @@ class DatasetsController(BaseController):
                 # File upload by a not-too-savvy method - Service-orientated fallback:
                 # Assume file upload to 'filename'
                 params = request.POST
+
                 item = c_silo.get_item(id)
+                creator = None
+                if item.manifest and item.manifest.state and 'metadata' in item.manifest.state and item.manifest.state['metadata'] and \
+                    'createdby' in item.manifest.state['metadata'] and item.manifest.state['metadata']['createdby']:
+                    creator = item.manifest.state['metadata']['createdby']
+                if not (ident['repoze.who.userid'] == creator or ident.get('role') in ["admin", "manager"]):
+                    abort(403)
+
+                upload = params.get('file')
+                #if not upload:
+                #    abort(400, "No file was recived")
                 filename = params.get('filename')
                 if not filename:
                     filename = params['file'].filename
-                upload = params.get('file')
-                if JAILBREAK.search(filename) != None:
+                if filename and JAILBREAK.search(filename) != None:
                     abort(400, "'..' cannot be used in the path or as a filename")
                 target_path = filename
                 
@@ -382,23 +489,22 @@ class DatasetsController(BaseController):
 
                 if filename == "manifest.rdf":
                     #Copy the uploaded file to a tmp area 
-                    mani_file = os.path.join('/tmp', filename.lstrip(os.sep))
+                    #mani_file = os.path.join('/tmp', filename.lstrip(os.sep))
+                    mani_file = os.path.join('/tmp', uuid4().hex)
                     mani_file_obj = open(mani_file, 'w')
                     shutil.copyfileobj(upload.file, mani_file_obj)
                     upload.file.close()
                     mani_file_obj.close()
                     #test rdf file
-                    mani_file_obj = open(mani_file, 'r')
-                    manifest_str = mani_file_obj.read()
-                    mani_file_obj.close()
-                    if not test_rdf(manifest_str):
+                    if not test_rdf(mani_file):
                         response.status_int = 400
                         return "Bad manifest file"
                     #munge rdf
                     item.increment_version_delta(clone_previous_version=True, copy_filenames=['manifest.rdf'])
                     a = item.get_rdf_manifest()
                     b = a.to_string()
-                    munge_manifest(manifest_str, item)
+                    #munge_manifest(manifest_str, item)
+                    munge_manifest(mani_file, item)
                 else:
                     if code == 204:
                         item.increment_version_delta(clone_previous_version=True, copy_filenames=['manifest.rdf', filename])
@@ -436,7 +542,7 @@ class DatasetsController(BaseController):
                 mimetype = accept_list.pop(0)
                 while(mimetype):
                     if str(mimetype).lower() in ["text/html", "text/xhtml"]:
-                        redirect_to(controller="datasets", action="datasetview", id=id, silo=silo)
+                        redirect(url(controller="datasets", action="datasetview", id=id, silo=silo))
                     elif str(mimetype).lower() in ["text/plain"]:
                         response.content_type = "text/plain"
                         return response_message
@@ -453,10 +559,17 @@ class DatasetsController(BaseController):
                 item = c_silo.get_item(id)
                 filename = params.get('filename')
                 if not filename:
-                    abort(406, "Must supply a filename")
-                
+                    abort(400, "Bad Request. Must supply a filename")
                 if JAILBREAK.search(filename) != None:
                     abort(400, "'..' cannot be used in the path or as a filename")
+
+                creator = None
+                if item.manifest and item.manifest.state and 'metadata' in item.manifest.state and item.manifest.state['metadata'] and \
+                    'createdby' in item.manifest.state['metadata'] and item.manifest.state['metadata']['createdby']:
+                    creator = item.manifest.state['metadata']['createdby']
+                if not (ident['repoze.who.userid'] == creator or ident.get('role') in ["admin", "manager"]):
+                    abort(403)
+                
                 target_path = filename
                 
                 if item.isfile(target_path):
@@ -473,12 +586,19 @@ class DatasetsController(BaseController):
                     # valid to make sure it's valid RDF
                     # Otherwise this dataset will not be accessible
                     text = params['text']
-                    if not test_rdf(text):
-                        abort(406, "Not able to parse RDF/XML")
+                    fname = '/tmp/%s'%uuid4().hex
+                    f = codecs.open(fname, 'w', 'utf-8')
+                    #f = open(fname, 'w')
+                    f.write(text)
+                    f.close()
+                    #if not test_rdf(text):
+                    if not test_rdf(fname):
+                        abort(400, "Not able to parse RDF/XML")
                     item.increment_version_delta(clone_previous_version=True, copy_filenames=['manifest.rdf'])
                     a = item.get_rdf_manifest()
                     b = a.to_string()
-                    munge_manifest(text, item)
+                    munge_manifest(fname, item)
+                    os.remove(fname)
                 else:
                     if code == 204:
                         item.increment_version_delta(clone_previous_version=True, copy_filenames=['manifest.rdf', filename])
@@ -514,7 +634,7 @@ class DatasetsController(BaseController):
                 mimetype = accept_list.pop(0)
                 while(mimetype):
                     if str(mimetype).lower() in ["text/html", "text/xhtml"]:
-                        redirect_to(controller="datasets", action="datasetview", id=id, silo=silo)
+                        redirect(url(controller="datasets", action="datasetview", id=id, silo=silo))
                     elif str(mimetype).lower() in ["text/plain", "application/json"]:
                         response.content_type = "text/plain"
                         return response_message
@@ -527,22 +647,30 @@ class DatasetsController(BaseController):
                 return response_message
             else:
                 response.content_type = "text/plain"
-                response.status_int = 403
-                response.status = "403 Forbidden"
-                return "403 Forbidden"
-        elif http_method == "DELETE" and c.editor:
-            if c_silo.exists(id):
-                c_silo.del_item(id)
-                
-                # Broadcast deletion
-                ag.b.deletion(silo, id, ident=ident['repoze.who.userid'])
-                
-                response.content_type = "text/plain"
-                response.status_int = 200
-                response.status = "200 OK"
-                return "{'ok':'true'}"   # required for the JQuery magic delete to succede.
-            else:
+                response.status_int = 400
+                response.status = "400 Bad request"
+                return "400 Bad Request. No valid parameters found."
+        elif http_method == "DELETE":
+            if not c_silo.exists(id):
                 abort(404)
+
+            item = c_silo.get_item(id)
+            creator = None
+            if item.manifest and item.manifest.state and 'metadata' in item.manifest.state and item.manifest.state['metadata'] and \
+                'createdby' in item.manifest.state['metadata'] and item.manifest.state['metadata']['createdby']:
+                creator = item.manifest.state['metadata']['createdby']
+            if not (ident['repoze.who.userid'] == creator or ident.get('role') in ["admin", "manager"]):
+                abort(403)
+
+            c_silo.del_item(id)
+            
+            # Broadcast deletion
+            ag.b.deletion(silo, id, ident=ident['repoze.who.userid'])
+            
+            response.content_type = "text/plain"
+            response.status_int = 200
+            response.status = "200 OK"
+            return "{'ok':'true'}" # required for the JQuery magic delete to succede.
 
     @rest.restrict('GET') 
     def datasetview_vnum(self, silo, id, vnum):       
@@ -569,6 +697,7 @@ class DatasetsController(BaseController):
 
         embargoed = False
         c.editor = False 
+
         if item.metadata.get('embargoed') not in ["false", 0, False]:
             embargoed = True
         if embargoed:
@@ -656,53 +785,90 @@ class DatasetsController(BaseController):
     def itemview(self, silo, id, path):
         if not ag.granary.issilo(silo):
             abort(404)
-        # Check to see if embargo is on:
+
         c.silo_name = silo
         c.id = id
-        c.version = None
         c.path = path
-        c_silo = ag.granary.get_rdf_silo(silo)
-        
+
+        c_silo = ag.granary.get_rdf_silo(silo)   
         if not c_silo.exists(id):
-            # dataset doesn't exist yet...
-            # DECISION FOR POST / PUT : Auto-instantiate dataset and then put file there?
-            #           or error out with perhaps a 404?
-            # Going with error out...
             abort(404)
-        
-        embargoed = False
-        item = c_silo.get_item(id)        
-        if item.metadata.get('embargoed') not in ["false", 0, False]:
-            embargoed = True
-        
-        http_method = request.environ['REQUEST_METHOD']
-        
-        editor = False
-        granary_list = ag.granary.silos
-        if not (http_method == "GET"):
-            #identity management if item 
-            if not request.environ.get('repoze.who.identity'):
-                abort(401, "Not Authorised")
-            ident = request.environ.get('repoze.who.identity')  
-            c.ident = ident
-            silos = ag.authz(granary_list, ident)      
-            if silo not in silos:
-                abort(403, "Forbidden")
-            editor = silo in silos
-        elif embargoed:
-            if not request.environ.get('repoze.who.identity'):
-                abort(401, "Not Authorised")  
-            ident = request.environ.get('repoze.who.identity')  
-            c.ident = ident
-            silos = ag.authz(granary_list, ident)      
-            if silo not in silos:
-                abort(403, "Forbidden")
-            editor = silo in silos
+
         ident = request.environ.get('repoze.who.identity')  
         c.ident = ident
-        if ident:
-            silos = ag.authz(granary_list, ident)
-            editor = silo in silos
+        granary_list = ag.granary.silos
+        item = c_silo.get_item(id)
+        creator = None
+        if item.manifest and item.manifest.state and 'metadata' in item.manifest.state and item.manifest.state['metadata'] and \
+            'createdby' in item.manifest.state['metadata'] and item.manifest.state['metadata']['createdby']:
+            creator = item.manifest.state['metadata']['createdby']
+
+        c.version = None
+        c.editor = False
+       
+        http_method = request.environ['REQUEST_METHOD']
+        
+        if not (http_method == "GET"):
+            #identity management of item 
+            if not request.environ.get('repoze.who.identity'):
+                abort(401, "Not Authorised")
+            silos = ag.authz(granary_list, ident)      
+            if silo not in silos:
+                abort(403, "Forbidden")
+            if not (ident['repoze.who.userid'] == creator or ident.get('role') in ["admin", "manager"]):
+                abort(403, "Forbidden")
+        elif http_method == "GET":
+            embargoed = False
+            options = request.GET
+
+            currentversion = str(item.currentversion)
+            if 'version' in options:
+                if not options['version'] in item.manifest['versions']:
+                    abort(404)
+                c.version = str(options['version'])
+                if c.version and not c.version == currentversion:
+                    item.set_version_cursor(c.version)
+
+            if ag.metadata_embargoed:
+                if not ident:
+                    abort(401, "Not Authorised")
+                silos = ag.authz(granary_list, ident)      
+                if silo not in silos:
+                    abort(403, "Forbidden")
+                if ident['repoze.who.userid'] == creator or ident.get('role') in ["admin", "manager"]:
+                    c.editor = True
+            elif item.metadata.get('embargoed') not in ["false", 0, False]:
+                if not ident:
+                    abort(401)
+                silos = ag.authz(granary_list, ident)      
+                if silo not in silos:
+                    abort(403)
+                if not ident['repoze.who.userid'] == creator and not ident.get('role') in ["admin", "manager"]:
+                    abort(403)
+                embargoed = True
+                c.editor = True                   
+            elif ident:
+                silos = ag.authz(granary_list, ident)
+                if silo in silos:
+                    if ident['repoze.who.userid'] == creator or ident.get('role') in ["admin", "manager"]:
+                        c.editor = True
+
+            c.show_files = True
+            #Only the administrator, manager and creator can view embargoed files.
+            if embargoed and not c.editor:
+                c.show_files = False
+
+            #Display but do not edit previous versions of files, since preious versions are read only.
+            if c.version and not c.version == currentversion:
+                c.editor = False
+
+            # View options
+            if "view" in options and c.editor:
+                c.view = options['view']
+            elif c.editor:
+                c.view = 'editor'
+            else:
+                c.view = 'user'
         
         if http_method == "GET":
             if item.isfile(path):
@@ -745,13 +911,12 @@ class DatasetsController(BaseController):
                 return render("/itemview.html")
             else:
                 abort(404)
-        elif http_method == "PUT" and editor:
+        elif http_method == "PUT":
             # Pylons loads the request body into request.body...
             # This is not going to work for large files... ah well
             # POST will handle large files as they are pushed to disc,
             # but this won't
             content = request.body
-            item = c_silo.get_item(id)
                 
             if JAILBREAK.search(path) != None:
                 abort(400, "'..' cannot be used in the path")
@@ -768,15 +933,23 @@ class DatasetsController(BaseController):
 
             #Check if path is manifest.rdf - If, yes Munge
             if "manifest.rdf" in path:
+                fname = '/tmp/%s'%uuid4().hex
+                f = open(fname, 'w')
+                f.write(content)
+                f.close()
                 #test content is valid rdf
-                if not test_rdf(content):
+                #if not test_rdf(content):
+                "Manifest file created:", fname
+                if not test_rdf(fname):
                     response.status_int = 400
                     return "Bad manifest file"
                 #munge rdf
                 item.increment_version_delta(clone_previous_version=True, copy_filenames=['manifest.rdf'])
                 a = item.get_rdf_manifest()
                 b = a.to_string()
-                munge_manifest(content, item)
+                #munge_manifest(content, item)
+                munge_manifest(fname, item)
+                os.remove(fname)
             else:
                 if code == 204:
                     item.increment_version_delta(clone_previous_version=True, copy_filenames=['manifest.rdf', path])
@@ -813,7 +986,7 @@ class DatasetsController(BaseController):
             mimetype = accept_list.pop(0)
             while(mimetype):
                 if str(mimetype).lower() in ["text/html", "text/xhtml"]:
-                    redirect_to(controller="datasets", action="itemview", id=id, silo=silo, path=path)
+                    redirect(url(controller="datasets", action="itemview", id=id, silo=silo, path=path))
                 elif str(mimetype).lower() in ["text/plain", "application/json"]:
                     response.content_type = "text/plain"
                     return response_message
@@ -824,17 +997,20 @@ class DatasetsController(BaseController):
             #Whoops - nothing satisfies - return text / plain
             response.content_type = "text/plain"
             return response_message
-        elif http_method == "POST" and editor:
+        elif http_method == "POST":
             # POST... differences from PUT:
             # path = filepath that this acts on, should be dir, or non-existant
             # if path is a file, this will revert to PUT's functionality and
             # overwrite the file, if there is a multipart file uploaded
             # Expected params: filename, file (uploaded file)
             params = request.POST
-            item = c_silo.get_item(id)
             filename = params.get('filename')
             upload = params.get('file')
-            if JAILBREAK.search(filename) != None:
+            #if not upload:
+            #    abort(400, "No file was recived")
+            if not filename:
+                filename = params['file'].filename
+            if filename and JAILBREAK.search(filename) != None:
                 abort(400, "'..' cannot be used in the path or as a filename")
             target_path = path
             if item.isdir(path) and filename:
@@ -852,23 +1028,23 @@ class DatasetsController(BaseController):
 
             if filename == "manifest.rdf":
                 #Copy the uploaded file to a tmp area 
-                mani_file = os.path.join('/tmp', filename.lstrip(os.sep))
+                #mani_file = os.path.join('/tmp', filename.lstrip(os.sep))
+                mani_file = os.path.join('/tmp', uuid4().hex)
                 mani_file_obj = open(mani_file, 'w')
                 shutil.copyfileobj(upload.file, mani_file_obj)
                 upload.file.close()
                 mani_file_obj.close()
                 #test rdf file
-                mani_file_obj = open(mani_file, 'r')
-                manifest_str = mani_file_obj.read()
-                mani_file_obj.close()
-                if not test_rdf(manifest_str):
+                if not test_rdf(mani_file):
                     response.status_int = 400
                     return "Bad manifest file"
                 #munge rdf
                 item.increment_version_delta(clone_previous_version=True, copy_filenames=['manifest.rdf'])
                 a = item.get_rdf_manifest()
                 b = a.to_string()
-                munge_manifest(manifest_str, item)
+                #munge_manifest(manifest_str, item)
+                munge_manifest(mani_file, item)
+                os.remove(mani_file)
             else:
                 if code == 204:
                     item.increment_version_delta(clone_previous_version=True, copy_filenames=['manifest.rdf', filename])
@@ -906,7 +1082,7 @@ class DatasetsController(BaseController):
             mimetype = accept_list.pop(0)
             while(mimetype):
                 if str(mimetype).lower() in ["text/html", "text/xhtml"]:
-                    redirect_to(controller="datasets", action="itemview", id=id, silo=silo, path=path)
+                    redirect(url(controller="datasets", action="itemview", id=id, silo=silo, path=path))
                 elif str(mimetype).lower() in ["text/plain", "application/json"]:
                     response.content_type = "text/plain"
                     return response_message
@@ -917,14 +1093,18 @@ class DatasetsController(BaseController):
             #Whoops - nothing satisfies - return text / plain
             response.content_type = "text/plain"
             return response_message
-        elif http_method == "DELETE" and editor:
-            item = c_silo.get_item(id)
+        elif http_method == "DELETE":
             if item.isfile(path):
                 if 'manifest.rdf' in path:
                     response.content_type = "text/plain"
                     response.status_int = 403
                     response.status = "403 Forbidden"
                     return "Forbidden - Cannot delete the manifest"
+                if '3=' in path or '4=' in path:
+                    response.content_type = "text/plain"
+                    response.status_int = 403
+                    response.status = "403 Forbidden"
+                    return "Forbidden - These files are generated by the system and connot be deleted"
                 item.increment_version_delta(clone_previous_version=True, copy_filenames=['manifest.rdf'])
                 item.del_stream(path)
                 item.del_triple(item.uri, u"dcterms:modified")
@@ -988,7 +1168,13 @@ class DatasetsController(BaseController):
             silos = ag.authz(granary_list, ident)      
             if silo not in silos:
                 abort(403, "Forbidden")
-        
+            creator = None
+            if item.manifest and item.manifest.state and 'metadata' in item.manifest.state and item.manifest.state['metadata'] and \
+                'createdby' in item.manifest.state['metadata'] and item.manifest.state['metadata']['createdby']:
+                creator = item.manifest.state['metadata']['createdby']
+            if not ident['repoze.who.userid'] == creator and not ident.get('role') in ["admin", "manager"]:
+                abort(403)
+
         if item.isfile(path):
             fileserve_app = FileApp(item.to_dirpath(path))
             return fileserve_app(request.environ, self.start_response)

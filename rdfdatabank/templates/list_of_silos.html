@@ -3,13 +3,17 @@
 <%def name="head_tags()">
   <title> List of Silos </title>
 </%def>
+<%
+n = len(c.silos)
+%>
 <h1> List of Silos </h1>
 % if c.silos:
-<ul class="silos">
-% for silo in c.silos:
-<li><a href="/${silo}">${silo}</a><ul>
-<li><a href="/${silo}/datasets">Datasets </a></li>
-</ul>
-% endfor
-</ul>
+  <p>Number of silos: ${n}</p>
+  <ul>
+  % for silo in c.silos:
+    <li><a href="/${silo}">${silo}</a><ul>
+    <li><a href="/${silo}/datasets">Datasets </a></li>
+    </ul>
+  % endfor
+  </ul>
 % endif

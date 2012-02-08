@@ -1,15 +1,41 @@
-from datetime import datetime, timedelta
-from time import sleep
-from redis import Redis
-from redis.exceptions import ConnectionError
+# -*- coding: utf-8 -*-
+"""
+Copyright (c) 2012 University of Oxford
 
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of this software and associated documentation files (the
+"Software"), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, --INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+"""
+
+from datetime import datetime, timedelta
+from dateutil.relativedelta import *
+from dateutil.parser import parse
+from time import sleep
+import os
 import simplejson
 
 from pylons import app_globals as ag
 
 from rdflib import ConjunctiveGraph
+from StringIO import StringIO
 from rdflib import StringInputSource
 from rdflib import Namespace, RDF, RDFS, URIRef, Literal, BNode
+
 
 from uuid import uuid4
 import re
@@ -28,24 +54,42 @@ def authz(granary_list,ident):
             return owners
         else:
             return []
-    #For auth, the code is looking at the list of owners against each silo and not looking at the owner list against each user. A '*' here is meaningless.
-    #TODO: Modify code to look at both and keep both silo owner and silos a user has acces to in users.py in sunc and use both
-    if ident['role'] == "admin":
+    if 'role' in ident and ident['role'] == "admin":
         authd = []
+        silos_owned = ident['owner']
+        if not type(silos_owned).__name__ == 'list':
+            silos_owned = [silos_owned]
+        if '*' in silos_owned:
+            #User has access to all silos
+            return granary_list
         for item in granary_list:
-            owners = _parse_owners(item)
-            if '*' in owners:
-                return granary_list
-            if ident['repoze.who.userid'] in owners:
+            if item in silos_owned:
                 authd.append(item)
+            else:
+                owners = _parse_owners(item)
+                if '*' in owners:
+                    #All users have access to the silo
+                    authd.append(item)
+                if ident['repoze.who.userid'] in owners:
+                    authd.append(item)
+        return authd
+    elif 'owner' in ident:
+        authd = []
+        silos_owned = ident['owner']
+        if not type(silos_owned).__name__ == 'list':
+            silos_owned = [silos_owned]
+        for item in granary_list:
+            if item in silos_owned:
+                authd.append(item)
+            else:
+                owners = _parse_owners(item)
+                if ident['repoze.who.userid'] in owners:
+                    authd.append(item)
         return authd
     else:
         authd = []
-        for item in granary_list:
-            owners = _parse_owners(item)
-            if ident['repoze.who.userid'] in owners:
-                authd.append(item)
         return authd
+        
 
 def allowable_id(identifier):
     if ID_PATTERN.match(identifier):
@@ -58,12 +102,11 @@ def allowable_id2(strg):
     return not bool(search(strg))
 
 def is_embargoed(silo, id, refresh=False):
-    # TODO evaluate r.expire settings for these keys - popularity resets ttl or increases it?
-    r = Redis()
+    # TODO evaluate ag.r.expire settings for these keys - popularity resets ttl or increases it?
     e = None
     e_d = None
-    e = r.get("%s:%s:embargoed" % (silo.state['storage_dir'], id))
-    e_d = r.get("%s:%s:embargoed_until" % (silo.state['storage_dir'], id))
+    e = ag.r.get("%s:%s:embargoed" % (silo.state['storage_dir'], id))
+    e_d = ag.r.get("%s:%s:embargoed_until" % (silo.state['storage_dir'], id))
 
     if refresh or (not e or not e_d):
         if silo.exists(id):
@@ -74,82 +117,64 @@ def is_embargoed(silo, id, refresh=False):
                 e = True
             else:
                 e = False
-            r.set("%s:%s:embargoed" % (silo.state['storage_dir'], id), e)
-            r.set("%s:%s:embargoed_until" % (silo.state['storage_dir'], id), e_d)
+            ag.r.set("%s:%s:embargoed" % (silo.state['storage_dir'], id), e)
+            ag.r.set("%s:%s:embargoed_until" % (silo.state['storage_dir'], id), e_d)
     return (e, e_d)
 
-def is_embargoed_with_exceptions(silo, id, refresh=False):
-    # TODO evaluate r.expire settings for these keys - popularity resets ttl or increases it?
-    r = Redis()
-    e = None
-    e_d = None
-    try:
-        e = r.get("%s:%s:embargoed" % (silo.state['storage_dir'], id))
-    except ConnectionError:  # The client can sometimes be timed out and disconnected at the server.
-        try:
-            r = Redis()
-            e = r.get("%s:%s:embargoed" % (silo.state['storage_dir'], id))
-        except:
-            pass
-    try:
-        e_d = r.get("%s:%s:embargoed_until" % (silo.state['storage_dir'], id))
-    except ConnectionError:  # The client can sometimes be timed out and disconnected at the server.
-        try:
-            r = Redis()
-            e_d = r.get("%s:%s:embargoed_until" % (silo.state['storage_dir'], id))
-        except:
-            pass
-
-    if refresh or (not e or not e_d):
-        if silo.exists(id):
-            item = silo.get_item(id)
-            e = item.metadata.get("embargoed")
-            e_d = item.metadata.get("embargoed_until")
-            if e not in ['false', 0, False]:
-                e = True
-            else:
-                e = False
+def get_embargo_values(embargoed=None, embargoed_until=None, embargo_days_from_now=None):
+    e_status=None
+    e_date=None
+    if embargoed == None:
+        #No embargo details are supplied by user
+        e_status = True
+        e_date = (datetime.now() + relativedelta(years=+70)).isoformat()
+    elif embargoed==True or embargoed.lower() in ['true', '1'] :
+        #embargo status is True
+        e_status = True
+        e_date = None
+        if embargoed_until:
             try:
-                r.set("%s:%s:embargoed" % (silo.state['storage_dir'], id), e)
-                r.set("%s:%s:embargoed_until" % (silo.state['storage_dir'], id), e_d)
-            except ConnectionError:  # The client can sometimes be timed out and disconnected at the server.
-                pass
-    return (e, e_d)
+                e_date = parse(embargoed_until, dayfirst=True, yearfirst=False).isoformat()
+            except:
+                e_date = (datetime.now() + relativedelta(years=+70)).isoformat()
+        elif embargo_days_from_now:
+            if embargo_days_from_now.isdigit():
+                e_date = (datetime.now() + timedelta(days=int(embargo_days_from_now))).isoformat()
+            else:
+                e_date = (datetime.now() + relativedelta(years=+70)).isoformat()
+    elif embargoed==False or embargoed.lower() in ['false', '0'] :
+        e_status = False
+    else:
+        #Default case: Treat it as though embargo=None
+        e_status = True
+        e_date = (datetime.now() + relativedelta(years=+70)).isoformat()
+    return (e_status, e_date)
 
-def is_embargoed_no_redis(silo, id, refresh=False):
-    #Redis kept crashing for silos with a largo number of data packages (~80,000). I tried re-connecting, it didn't work. 
-    #So not using Redis
-    # TODO evaluate r.expire settings for these keys - popularity resets ttl or increases it?
-    if silo.exists(id):
-        item = silo.get_item(id)
-        e = item.metadata.get("embargoed")
-        e_d = item.metadata.get("embargoed_until")
-        if e not in ['false', 0, False]:
-            e = True
-        else:
-            e = False
-    return (e, e_d)
-
-def create_new(silo, id, creator, title=None, embargoed=True, embargoed_until=None, embargo_days_from_now=None, **kw):
+def create_new(silo, id, creator, title=None, embargoed=None, embargoed_until=None, embargo_days_from_now=None, **kw):
     item = silo.get_item(id, startversion="0")
     item.metadata['createdby'] = creator
-    item.metadata['embargoed'] = embargoed
     item.metadata['uuid'] = uuid4().hex
     item.add_namespace('oxds', "http://vocab.ox.ac.uk/dataset/schema#")
     item.add_triple(item.uri, u"rdf:type", "oxds:DataSet")
 
-    if embargoed:
-        if embargoed_until:
-            embargoed_until_date = embargoed_until
-        elif embargo_days_from_now:
-            embargoed_until_date = (datetime.now() + timedelta(days=embargo_days_from_now)).isoformat()
-        else:
-            embargoed_until_date = (datetime.now() + timedelta(days=365*70)).isoformat()
-        item.metadata['embargoed_until'] = embargoed_until_date
+    item.metadata['embargoed_until'] = ''
+    item.del_triple(item.uri, u"oxds:isEmbargoed")
+    item.del_triple(item.uri, u"oxds:embargoedUntil")
+    ag.r.set("%s:%s:embargoed_until" % (silo.state['storage_dir'], id), ' ')
+    e, e_d = get_embargo_values(embargoed=embargoed, embargoed_until=embargoed_until, embargo_days_from_now=embargo_days_from_now)
+    if e:
+        item.metadata['embargoed'] = True
         item.add_triple(item.uri, u"oxds:isEmbargoed", 'True')
-        item.add_triple(item.uri, u"oxds:embargoedUntil", embargoed_until_date)
+        ag.r.set("%s:%s:embargoed" % (silo.state['storage_dir'], id), True)
+        if e_d:
+            item.metadata['embargoed_until'] = e_d
+            item.add_triple(item.uri, u"oxds:embargoedUntil", e_d)        
+            ag.r.set("%s:%s:embargoed_until" % (silo.state['storage_dir'], id), e_d)
     else:
+        item.metadata['embargoed'] = False
         item.add_triple(item.uri, u"oxds:isEmbargoed", 'False')
+        ag.r.set("%s:%s:embargoed" % (silo.state['storage_dir'], id), False)
+
     item.add_triple(item.uri, u"dcterms:identifier", id)
     item.add_triple(item.uri, u"dcterms:mediator", creator)
     item.add_triple(item.uri, u"dcterms:publisher", ag.publisher)
@@ -174,7 +199,7 @@ def get_readme_text(item, filename="README"):
     with item.get_stream(filename) as fn:
         text = fn.read().decode("utf-8")
     return u"%s\n\n%s" % (filename, text)
-    
+
 def get_rdf_template(item_uri, item_id):
     g = ConjunctiveGraph(identifier=item_uri)
     g.bind('rdf', 'http://www.w3.org/1999/02/22-rdf-syntax-ns#')
@@ -183,20 +208,21 @@ def get_rdf_template(item_uri, item_id):
     data2 = g.serialize(format='xml', encoding="utf-8") + '\n'
     return data2
 
-def test_rdf(text):
+#def test_rdf(text):
+def test_rdf(mfile):
     g = ConjunctiveGraph()
     try:
-        g = g.parse(StringInputSource(text), format='xml')
+        g = g.parse(mfile, format='xml')
         return True
-    except:
+    except Exception as inst:
         return False
 
-def munge_manifest(manifest_str, item):    
+def munge_manifest(manifest_file, item):    
     #Get triples from the manifest file and remove the file
     triples = None
     ns = None
     seeAlsoFiles = None
-    ns, triples, seeAlsoFiles = read_manifest(item, manifest_str)
+    ns, triples, seeAlsoFiles = read_manifest(item, manifest_file)
     if ns and triples:
         for k, v in ns.iteritems():
             item.add_namespace(k, v)
@@ -225,13 +251,16 @@ def munge_manifest(manifest_str, item):
             filepath = fileuri.replace(item.uri, '').strip().lstrip('/')
             fullfilepath = item.to_dirpath(filepath=filepath)
             if fullfilepath and item.isfile(fullfilepath):
-                with item.get_stream(filepath) as fn:
-                    text = fn.read()
-                if test_rdf(text):
-                    munge_manifest(text, item)
+                ans = test_rdf(fullfilepath)
+                #with item.get_stream(filepath) as fn:
+                #    text = fn.read()
+                #if test_rdf(text):
+                #    munge_manifest(text, item)
+                if ans:
+                    munge_manifest(fullfilepath, item)
     return True
 
-def read_manifest(item, manifest_str):
+def read_manifest(item, manifest_file):
     triples = []
     namespaces = {}
     seeAlsoFiles = []
@@ -240,37 +269,61 @@ def read_manifest(item, manifest_str):
     aggregates = item.list_rdf_objects(item.uri, "ore:aggregates")
     
     g = ConjunctiveGraph()
-    gparsed = g.parse(StringInputSource(manifest_str), format='xml')
+    gparsed = g.parse(manifest_file, format='xml')
     namespaces = dict(g.namespaces())
-    
     #Get the subjects
     subjects = {}
     for s in gparsed.subjects():
         if s in subjects:
             continue
         if type(s).__name__ == 'URIRef':
-            subjects[s] = URIRef(s)
+            if str(s).startswith('file://'):
+                ss = str(s).replace('file://', '')
+                if manifest_file in ss:
+                    subjects[s] = URIRef(item.uri)
+                else:
+                    manifest_file_path, manifest_file_name = os.path.split(manifest_file)
+                    ss = ss.replace(manifest_file_path, '').strip('/')
+                    for file_uri in aggregates:
+                        if ss in str(file_uri):
+                            subjects[s] = URIRef(file_uri)
+                            break
+                    if not s in subjects:
+                        subjects[s] = URIRef(item.uri)
+            else:
+                subjects[s] = URIRef(s)
         elif type(s).__name__ == 'BNode':
-            subjects[s] = s            
-
+            replace_subject = True
+            for o in gparsed.objects():
+                if o == s:
+                    replace_subject = False
+            if replace_subject:
+                subjects[s] = URIRef(item.uri)
+            else:
+                subjects[s] = s
     #Get the dataset type 
     #set the subject uri to item uri if it is of type as defined in oxdsClasses
     datasetType = False
     for s,p,o in gparsed.triples((None, RDF.type, None)):
         if str(o) in oxdsClasses:
-            if type(s).__name__ == 'URIRef' and len(s) > 0 and str(s) != str(item.uri):
+            if type(s).__name__ == 'URIRef' and len(s) > 0 and str(s) != str(item.uri) and str(subjects[s]) != str(item.uri):
                 namespaces['owl'] = URIRef("http://www.w3.org/2002/07/owl#")
                 triples.append((item.uri, 'owl:sameAs', s))
                 triples.append((item.uri, RDF.type, o))              
-            elif type(s).__name__ == 'BNode' or (type(s).__name__ == 'URIRef' and len(s) == 0) or str(s) == str(item.uri):
+            elif type(s).__name__ == 'BNode' or len(s) == 0 or str(s) == str(item.uri) or str(subjects[s]) == str(item.uri):
                 gparsed.remove((s, p, o))
             subjects[s] = item.uri
 
     #Get the uri for the see also files
     for s,p,o in gparsed.triples((None, URIRef('http://www.w3.org/2000/01/rdf-schema#seeAlso'), None)):
-        for objs in aggregates:
-            if str(o) in str(objs):
-                seeAlsoFiles.append(str(objs))
+        if type(o).__name__ == 'URIRef' and len(o) > 0:
+            obj = str(o)
+            if obj.startswith('file://'):
+                obj_path, obj_name = os.path.split(obj)
+                obj = obj.replace(obj_path, '').strip('/')
+            for file_uri in aggregates:
+                if obj in str(file_uri):
+                    seeAlsoFiles.append(file_uri)
         gparsed.remove((s, p, o))
 
     #Add remaining triples
@@ -278,10 +331,10 @@ def read_manifest(item, manifest_str):
         triples.append((subjects[s], p, o))
     return namespaces, triples, seeAlsoFiles
 
-def manifest_type(manifest_str):
+def manifest_type(manifest_file):
     mani_types = []
     g = ConjunctiveGraph()
-    gparsed = g.parse(StringInputSource(manifest_str), format='xml')
+    gparsed = g.parse(manifest_file, format='xml')
     for s,p,o in gparsed.triples((None, RDF.type, None)):
         mani_types.append(str(o))
     if "http://vocab.ox.ac.uk/dataset/schema#DataSet" in mani_types:

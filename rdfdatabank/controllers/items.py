@@ -1,9 +1,33 @@
+# -*- coding: utf-8 -*-
+"""
+Copyright (c) 2012 University of Oxford
+
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of this software and associated documentation files (the
+"Software"), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, --INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+"""
+
 import logging
 import os, time
 from datetime import datetime, timedelta
 import simplejson
 from pylons import request, response, session, tmpl_context as c, url, app_globals as ag
-from pylons.controllers.util import abort, redirect_to
+from pylons.controllers.util import abort, redirect
 from pylons.decorators import rest
 
 from rdfdatabank.lib.base import BaseController, render
@@ -19,30 +43,55 @@ class ItemsController(BaseController):
 
     @rest.restrict('GET', 'POST')
     def datasetview(self, silo, id):
-        #tmpl_context variables needed: c.silo_name, c.zipfiles, c.ident, c.id, c.path
-        c.silo_name = silo
-        c.id = id
-        
-        if not request.environ.get('repoze.who.identity'):
-            abort(401, "Not Authorised")
-
+        """Get a list of zipfiles in dataset 'id' within the silo 'silo' and unpack a dataset."""
+                
         if not ag.granary.issilo(silo):
             abort(404)
-
-        ident = request.environ.get('repoze.who.identity')  
-        c.ident = ident
-        granary_list = ag.granary.silos
-        silos = ag.authz(granary_list, ident)      
-        if silo not in silos:
-            abort(403, "Forbidden")
-
+            
         rdfsilo = ag.granary.get_rdf_silo(silo)
         if not rdfsilo.exists(id):
             abort (404)
-
+            
+        #tmpl_context variables needed: c.silo_name, c.zipfiles, c.ident, c.id, c.path
+        c.silo_name = silo
+        c.id = id
+        ident = request.environ.get('repoze.who.identity')  
+        c.ident = ident
+        granary_list = ag.granary.silos
         dataset = rdfsilo.get_item(id)
 
+        creator = None
+        if dataset.manifest and dataset.manifest.state and 'metadata' in dataset.manifest.state and dataset.manifest.state['metadata'] and \
+            'createdby' in dataset.manifest.state['metadata'] and dataset.manifest.state['metadata']['createdby']:
+            creator = dataset.manifest.state['metadata']['createdby']
+
         http_method = request.environ['REQUEST_METHOD']
+        
+        if http_method == "GET":
+            c.editor = False
+            if ag.metadata_embargoed:
+                if not ident:
+                    abort(401, "Not Authorised")
+                silos = ag.authz(granary_list, ident)
+                if silo not in silos:
+                    abort(403, "Forbidden")
+                if ident['repoze.who.userid'] == creator or ident.get('role') in ["admin", "manager"]:
+                    c.editor = True
+            elif ident:
+                silos = ag.authz(granary_list, ident)
+                if silo in silos:
+                    if ident['repoze.who.userid'] == creator or ident.get('role') in ["admin", "manager"]:
+                        c.editor = True
+        else:
+            #identity management of item 
+            if not ident:
+                abort(401, "Not Authorised")
+            silos = ag.authz(granary_list, ident)      
+            if silo not in silos:
+                abort(403, "Forbidden")
+            if not (ident['repoze.who.userid'] == creator or ident.get('role') in ["admin", "manager"]):
+                abort(403, "Forbidden")
+
         if http_method == "GET":
             c.zipfiles = get_zipfiles_in_dataset(dataset)
             # conneg return
@@ -106,7 +155,7 @@ class ItemsController(BaseController):
             try:
                 unpack_zip_item(target_dataset, dataset, params['filename'], rdfsilo, ident['repoze.who.userid'])
             except BadZipfile:
-                abort(400, "Couldn't unpack zipfile")
+                abort(400, "BadZipfile: Couldn't unpack zipfile")
 
             target_dataset.sync()
             target_dataset.sync()
@@ -124,7 +173,7 @@ class ItemsController(BaseController):
             mimetype = accept_list.pop(0)
             while(mimetype):
                 if str(mimetype).lower() in ["text/html", "text/xhtml"]:
-                    redirect_to(controller="datasets", action="datasetview", silo=silo, id=target_dataset_name)
+                    redirect(url(controller="datasets", action="datasetview", silo=silo, id=target_dataset_name))
                 elif str(mimetype).lower() in ["text/plain", "application/json"]:
                     response.content_type = "text/plain"
                     return response_message
@@ -138,32 +187,50 @@ class ItemsController(BaseController):
  
     @rest.restrict('GET', 'POST')
     def itemview(self, silo, id, path):
-        #tmpl_context variables needed: c.silo_name, c.zipfile_contents c.ident, c.id, c.path
-        c.silo_name = silo
-        c.id = id
-        c.path = path
-
-        if not request.environ.get('repoze.who.identity'):
-            abort(401, "Not Authorised")
-
-        if not ag.granary.issilo(silo):
-            abort(404)
-
+        """API call to read the contents of a zip-file (without having to unpack) and unpack a zip file into a new / existing dataset"""
+        #tmpl_context variables needed: c.silo_name, c.zipfile_contents c.ident, c.id, c.path       
         if not path:
             abort(400, "You must supply a filename to unpack")
-
-        ident = request.environ.get('repoze.who.identity')  
-        c.ident = ident
-        granary_list = ag.granary.silos
-        silos = ag.authz(granary_list, ident)      
-        if silo not in silos:
-            abort(403, "Forbidden")
+            
+        if not ag.granary.issilo(silo):
+            abort(404)
 
         rdfsilo = ag.granary.get_rdf_silo(silo)
         if not rdfsilo.exists(id):
             abort (404)
 
+        c.silo_name = silo
+        c.id = id
+        c.path = path
+
+        ident = request.environ.get('repoze.who.identity')  
+        c.ident = ident
+        granary_list = ag.granary.silos
         dataset = rdfsilo.get_item(id)
+                    
+        creator = None
+        if dataset.manifest and dataset.manifest.state and 'metadata' in dataset.manifest.state and dataset.manifest.state['metadata'] and \
+            'createdby' in dataset.manifest.state['metadata'] and dataset.manifest.state['metadata']['createdby']:
+            creator = dataset.manifest.state['metadata']['createdby']
+
+        http_method = request.environ['REQUEST_METHOD']
+        
+        if http_method == "GET":
+            if dataset.metadata.get('embargoed') not in ["false", 0, False]:
+                if not ident:
+                    abort(401, "Not Authorised")
+                silos = ag.authz(granary_list, ident)
+                if silo not in silos:
+                    abort(403, "Forbidden")
+        else: 
+            if not ident:
+                abort(401, "Not Authorised")
+            silos = ag.authz(granary_list, ident)
+            if silo not in silos:
+                abort(403, "Forbidden")     
+            if not (ident['repoze.who.userid'] == creator or ident.get('role') in ["admin", "manager"]):
+                abort(403, "Forbidden")
+
         item_real_filepath = dataset.to_dirpath()
         target_filepath = "%s/%s"%(item_real_filepath, path)
         #c.parts = dataset.list_parts(detailed=False)
@@ -173,8 +240,7 @@ class ItemsController(BaseController):
             abort(404, "File not found")
         if not check_file_mimetype(target_filepath, 'application/zip'): 
             abort(415, "File is not of type application/zip")
-
-        http_method = request.environ['REQUEST_METHOD']
+                
         if http_method == "GET":
             try:
                 c.zipfile_contents = read_zipfile(target_filepath)
@@ -251,7 +317,7 @@ class ItemsController(BaseController):
             mimetype = accept_list.pop(0)
             while(mimetype):
                 if str(mimetype).lower() in ["text/html", "text/xhtml"]:
-                    redirect_to(controller="datasets", action="datasetview", silo=silo, id=target_dataset_name)
+                    redirect(url(controller="datasets", action="datasetview", silo=silo, id=target_dataset_name))
                 elif str(mimetype).lower() in ["text/plain", "application/json"]:
                     response.content_type = "text/plain"
                     return response_message
@@ -266,21 +332,49 @@ class ItemsController(BaseController):
     @rest.restrict('GET')
     def subitemview(self, silo, id, path, subpath):
         #Function to retreive a file from the zipfile
-        #TODO
-        #tmpl_context variables needed: c.silo_name, c.zipfile_contents c.ident, c.id, c.path
-        c.silo_name = silo
-        c.id = id
-        c.path = path
-        c.subpath = subpath
+        #TODO 
+        #    I check to see the path is avlid and it is a zip file.
+        #    I do not deal with subpath. if it is a file - serve it. If it is a dir, show the contents of it.
 
-        if not request.environ.get('repoze.who.identity'):
-            abort(401, "Not Authorised")
-
+        #tmpl_context variables needed: c.silo_name, c.zipfile_contents c.ident, c.id, c.path       
         if not ag.granary.issilo(silo):
             abort(404)
 
         if not (path or subpath):
             abort(400, "You must supply a filename to unpack")
- 
+
+        rdfsilo = ag.granary.get_rdf_silo(silo)
+        if not rdfsilo.exists(id):
+            abort (404)
+
+        c.silo_name = silo
+        c.id = id
+        c.path = path
+        c.subpath = subpath
+
+        ident = request.environ.get('repoze.who.identity')  
+        c.ident = ident
+        granary_list = ag.granary.silos
+        dataset = rdfsilo.get_item(id)
+
+        if dataset.metadata.get('embargoed') not in ["false", 0, False]:
+            if not ident:
+                abort(401, "Not Authorised")
+            silos = ag.authz(granary_list, ident)
+            if silo not in silos:
+                abort(403, "Forbidden")
+                    
+        item_real_filepath = dataset.to_dirpath()
+        target_filepath = "%s/%s"%(item_real_filepath, path)
+        #c.parts = dataset.list_parts(detailed=False)
+        if not dataset.isfile(path):
+            abort(404, "File not found")
+        if not os.path.isfile(target_filepath):
+            abort(404, "File not found")
+        if not check_file_mimetype(target_filepath, 'application/zip'): 
+            abort(415, "File is not of type application/zip")
+
+        #TODO : if subpath is a file - serve it. If subpath is a dir, show the contents of the dir
+
         return render("/zipfilesubitemview.html")
 

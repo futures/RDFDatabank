@@ -1,30 +1,27 @@
 # -*- coding: utf-8 -*-
-<form method="POST" enctype="multipart/form-data" action="/${c.silo_name}/datasets/${c.current}">
-% if c.embargos:
-  % if c.embargos[c.current][0] not in ['False', 'false', 0, False]:
-    <dd><label for="embargoed_${c.current}">Embargoed?</label>
-    <input type="checkbox" id="embargoed_${c.current}"  name="embargoed" checked="checked"/></dd>
+<form method="POST" enctype="multipart/form-data" action="/${c.silo_name}/datasets/${c.current}" accept-charset="UTF-8">
+<label for="embargoed">Embargoed?</label>
+% if c.embargos and c.current in c.embargos and c.embargos[c.current]:
+  % if c.embargos[c.current][0] == True or (isinstance(c.embargos[c.current][0], basestring) and c.embargos[c.current][0].lower() in ['true', '1', 1]):
+    <input type="checkbox" name="embargoed_chkbox" checked="true" onclick="document.getElementById('embargoed').value = this.checked;"/>
+    <input type="hidden" name="embargoed" value="true" id="embargoed"/>
   % else:
-    <dd><label for="embargoed_${c.current}">Embargoed?</label>
-    <input type="checkbox" id="embargoed_${c.current}" name="embargoed"/></dd>
+    <input type="checkbox" name="embargoed_chkbox" onclick="document.getElementById('embargoed').value = this.checked;"/>
+    <input type="hidden" name="embargoed" value="false" id="embargoed"/>
   % endif
-  <dd><label for="embargoed_until_${c.current}">Embargoed until (date)</label>
-  <input type="text" id="embargoed_until_${c.current}" name="embargoed_until" value="${c.embargos[c.current][1]}" /></dd>
+  <br />
+  <label for="embargoed_until">Embargoed until (date)</label>
+  % if c.embargos[c.current][1]:
+      <input type="text" name="embargoed_until" value="${c.embargos[c.current][1]}" />
+  % else:
+      <input type="text" name="embargoed_until" value="" />
+  % endif
 % else:
-  <dd><label>Embargoed?</label>
-  <input type="checkbox" name="embargoed"/></dd>
-  <dd><label>Embargoed until (date)</label>
-  <input type="text" name="embargoed_until" /></dd>
+  <input type="checkbox" name="embargoed_chkbox" onclick="document.getElementById('embargoed').value = this.checked;"/>
+  <input type="hidden" name="embargoed" value="false" id="embargoed"/>
+  <br />
+  <label for="embargoed_until">Embargoed until (date)</label>
+  <input type="text" name="embargoed_until" />
 % endif
-<dd>Embargo state: 
-<div class="indent">True - only those logged in and with edit rights can see item. </div>
-<div class="indent">False - Anyone can GET the item and it's files.</div>
-</dd>
-<dd>Embargo date: 
-<div class="indent">Aim is for ISO8601 dates to provide embargo trigger events. Currently unused, unvalidated and unparsed.</div>
-</dd>
-<dd>
-<input type="hidden" name="embargo_change" value="true"/>
 <input type="submit" value="Change embargo"/>
-</dd>
 </form>
