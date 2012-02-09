@@ -9,9 +9,9 @@ if len(c.disp) > 50:
 %>
 <td align="left" width="150px"><b><a href="/${c.silo_name}/datasets/${c.id}/${c.zipfile}">${c.disp}</a></b></td>
 % if c.newid:
-<td align="left" width="300px">Id (optional) :<input type="text" name="id" value="${c.newid}" style="width:200px"/></td>
+<td align="left" width="500px">Id (optional) :<input type="text" name="id" value="${c.newid}" style="width:400px"/></td>
 % else:
-<td align="left" width="300px">Id (optional) :<input type="text" name="id" style="width:100px"/></td>
+<td align="left" width="500px">Id (optional) :<input type="text" name="id" style="width:400px"/></td>
 %endif
 <td align="left" width="80px"><input type="submit" name="Unpack" value="Unpack"/>
 <input type="hidden" name="filename" value="${c.zipfile}"/></td>

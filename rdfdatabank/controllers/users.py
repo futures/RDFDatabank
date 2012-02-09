@@ -108,6 +108,7 @@ class UsersController(BaseController):
             if params['username'] in ag.users:
                 abort(403, "User exists")
             code = 201
+            ag.users[params['username']] = {'role':'', 'first_name':'', 'last_name':'', 'name':'', 'owner':''}
             owner_of_silos = []
             if 'owner' in params and params['owner'] and (('first_name' in params and 'last_name' in params) or 'name' in params) and \
                'username' in params and params['username'] and 'password' in params and params['password']:
@@ -253,6 +254,7 @@ class UsersController(BaseController):
                 code = 204
             else:
                 code = 201
+                ag.users[params['username']] = {'role':'', 'first_name':'', 'last_name':'', 'name':'', 'owner':''}
             owner_of_silos = []
             if code == 201:            
                 if 'owner' in params and params['owner'] and 'password' in params and params['password'] and \

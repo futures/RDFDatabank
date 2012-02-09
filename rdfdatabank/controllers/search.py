@@ -165,7 +165,7 @@ class SearchController(BaseController):
         if request.params.get("type", None):
             c.typ = request.params.get("type")
 
-        if not c.q or c.q == '*':
+        if not c.q or c.q == '*' or c.q == "":
             c.q = "*:*"
  
         # Search controls

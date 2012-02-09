@@ -393,7 +393,7 @@ display: inline;
 
 ul.breadcrumb  li a
 {
-background: transparent url('styles/images/icons/breadcrumb-arrow.png') no-repeat center right; 
+background: transparent url('/static/styles/images/icons/breadcrumb-arrow.png') no-repeat center right; 
 padding-right: 12px;
 }
 
@@ -529,6 +529,7 @@ nav  {
 	border: 1px solid #dfe2e4;
 	border-top-style: none;
 	padding-bottom: 7px;
+        min-height: 55px;
 }
 
 nav label.nonVis
@@ -607,6 +608,14 @@ padding: 0px;
 padding-top: 7px;
 }
 
+
+.nav_rt {
+    position: absolute;
+    right: 20px;
+    top: 65px;
+    color: #000;
+    text-align: right;
+}
 
 
 footer.site
@@ -809,7 +818,7 @@ div.response_doc {
 .rt {
         color: #002147;
         vertical-align: top;
-        float:left;
+        float:right;
         padding-left: 5px;
         display: inline;
 }
@@ -845,7 +854,7 @@ div.response_doc {
         text-decoration: none;
         color: black;
         font-weight: normal;
-        background: url('styles/images/fplus.png') no-repeat 0% 60%;
+        background: url('/static/styles/images/fplus.png') no-repeat 0% 60%;
         padding-left: 18px;
 }
 
@@ -997,4 +1006,165 @@ span#itemsppt a.active:hover, span#itemsppb a.active:hover {
     color: black;
     border: 1px solid #666;
     background: #FFFF99;
+}
+/* Used in the api */
+.List-contents {
+   padding-bottom: 5px;
+   padding-left: 15px;
+   line-height: 150%;
+   /* background-image: url('/static/styles/images/blksquare.gif');
+   background-repeat: no-repeat;
+   background-position: 0 .2em; */
+}
+
+.List-entry {
+   padding-bottom: 5px;
+   padding-left: 30px;
+   line-height: 150%;
+   /* background-image: url('/static/styles/images/blkdiamond.gif');
+   background-repeat: no-repeat;
+   background-position: 0.8em 0.4em;
+   background-size: 12px; */
+}
+
+.Section {
+   font-size: 1.5em;
+   font-weight: bold;
+   margin-top: 10px;
+   padding: 10px 0px;
+}
+
+/*List of Datsets */
+.dataset_list {
+    margin: 0px 0px 20px 0px;
+}
+
+.dataset_list tr {
+   margin: 0px 10px 10px 10px;
+}
+
+.dataset_list td {
+   padding: 0px 0px 10px 10px;
+}
+
+.dataset_list li {
+   list-style-type: square;
+   list-style-image: url('/static/styles/images/blksquare.gif');
+   list-style-position: outside;
+}
+
+/*List of silos */
+.silo_list {
+   margin: 10px;
+   padding: 5px;
+}
+
+.silo_list ul {
+   margin-left: 1em;
+   padding-left: 0;
+   margin-top: -10px;
+}
+
+.silo_list li {
+   list-style-type: square;
+   list-style-image: url('/static/styles/images/blksquare.gif');
+   list-style-position: outside;
+   padding-top: 10px;
+}
+
+.silo_list li a {
+   padding: 10px;
+}
+
+/* .silo_list ul li:before {
+   content: "\00BB \0020";
+} */
+
+/* Data package */
+#editor_view {
+   float: right;
+   background: #fff; /* for non-css3 browsers */
+		filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#fff', endColorstr='#ccc'); /* for IE */
+		background: -webkit-gradient(linear, left top, left bottom, from(#fff), to(#ccc)); /* for webkit browsers */
+		background: -moz-linear-gradient(top,  #fff,  #ccc); /* for firefox 3.6+ */ 
+	border-top: 1px solid #ccc;
+	box-shadow: #666 0.3em 0.3em 0.2em; /* Opera 10.5, IE 9.0 */
+	 	-webkit-box-shadow: #aaa 0.3em 0.3em 0.2em; /* Chrome Safari */
+		-moz-box-shadow: #aaa 0.3em 0.3em 0.2em; /* Firefox F3.5+ */
+	clear: both;
+	margin: 10px 20px 10px 10px;
+	padding: 5px;
+	text-decoration: none;
+}
+
+#editor_view .title{
+    text-align: center;
+    font-weight: bold;
+}
+
+#editor_view a {
+    font-weight: normal;
+    margin-left: 5px;
+}
+
+#editor_view a.current {
+    font-weight: bold;
+}
+
+#editor_view img {
+   vertical-align: middle;
+   margin-right: 5px;
+}
+
+.dataset_info {
+    margin: 10px 10px 10px 20px;
+    padding-bottom: 10px;
+}
+
+.dataset_info a {
+    font-weight: normal;
+    margin-left: 5px;
+}
+
+.dataset_info a.current {
+    font-weight: bold;
+}
+
+.edit_section {
+   margin: 20px;
+   padding: 10px 20px;
+   border: 2px outset #333;
+}
+
+.edit_section div.top{
+    float: right;
+    margin-right: 0px;
+    margin-top: -20px;
+    position: relative;
+}
+
+.edit_section img{
+   vertical-align: bottom;
+}
+
+.form_helper {
+    margin-left: 20px;
+    margin-bottom: 10px;
+    max-width: 100%;
+    background-image: url('/static/styles/images/help-icon-16.png');
+    background-repeat: no-repeat;
+    background-position: 0 0;
+    padding-left: 20px;
+    min-height: 20px;
+}
+
+.form_info {
+    margin-left: 20px;
+    margin-bottom: 10px;
+    max-width: 100%;
+    background-image: url('/static/styles/images/info-icon-16.png');
+    background-repeat: no-repeat;
+    background-position: 0 0;
+    padding-left: 20px;
+    min-height: 20px;
 }

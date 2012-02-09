@@ -50,9 +50,6 @@ class DatasetsController(BaseController):
             abort(404)
         c.silo_name = silo
         granary_list = ag.granary.silos
-        #f = open('/tmp/ds.log', 'a')
-        #f.write(str(granary_list))
-        #f.close()
         ident = request.environ.get('repoze.who.identity')
         c.ident = ident
 
@@ -267,6 +264,8 @@ class DatasetsController(BaseController):
             c.embargos[id] = is_embargoed(c_silo, id)
             c.parts = item.list_parts(detailed=True)
             c.manifest_pretty = item.rdf_to_string(format="pretty-xml")
+            c.versions = item.manifest['versions']
+            c.versions.sort()
             #c.manifest = item.rdf_to_string()
             c.manifest = get_rdf_template(item.uri, id)
             c.zipfiles = get_zipfiles_in_dataset(item)
@@ -876,6 +875,8 @@ class DatasetsController(BaseController):
                 return fileserve_app(request.environ, self.start_response)
             elif item.isdir(path):
                 #c.parts = item.list_parts(detailed=True)
+                c.versions = item.manifest['versions']
+                c.versions.sort()
                 c.parts = item.list_parts(path, detailed=True)
                 c.readme_text = None
                 if "README" in c.parts.keys():
