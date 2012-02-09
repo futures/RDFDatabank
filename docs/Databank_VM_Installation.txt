@@ -44,6 +44,7 @@ II. Packages to be Installed
 
     sudo easy_install pairtree==0.5.6-T
     sudo easy_install repoze.who==2.0a4
+    sudo easy_install repoze.who_friendlyform
     sudo easy_install solrpy
 
     Installing profilers in python and pylons to obtain run time performance and other stats
