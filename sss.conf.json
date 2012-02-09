@@ -100,7 +100,7 @@
     # FIXME: at the moment the Entry Ingester in DataBank is hard coded, but we should break it out here
     #
     # Ingester to use for atom entries
-    # "entry_ingester" : "sss.ingesters_disseminators.DefaultEntryIngester",
+    "entry_ingester" : "rdfdatabank.lib.sword_server.DefaultEntryIngester",
     
     # we can turn off updates and deletes in order to examine the behaviour of Method Not Allowed errors
     # We leave these in and configured to true for DataBank, just in case we ever need to turn

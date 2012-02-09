@@ -105,14 +105,11 @@ class SwordDataBank(SwordServer):
         """
         raise NotImplementedError()
 
-    def deposit_new(self, silo, deposit):
-        """
-        Take the supplied deposit and treat it as a new container with content to be created in the specified collection
-        Args:
-        -collection:    the ID of the collection to be deposited into
-        -deposit:       the DepositRequest object to be processed
-        Returns a DepositResponse object which will contain the Deposit Receipt or a SWORD Error
-        """
+    def _get_authorised_rdf_silo(self, silo):
+    
+        if not ag.granary.issilo(silo):
+            return SwordError(status=404, empty=True)
+    
         # get the authorised list of silos
         granary_list = ag.granary.silos
         silos = ag.authz(granary_list, self.auth_credentials.identity)
@@ -127,13 +124,27 @@ class SwordDataBank(SwordServer):
             else:
                 # not found
                 raise SwordError(status=404, empty=True)
-
+        
         # get a full silo object
         rdf_silo = ag.granary.get_rdf_silo(silo)
+        return rdf_silo
+    
+    def deposit_new(self, silo, deposit):
+        """
+        Take the supplied deposit and treat it as a new container with content to be created in the specified collection
+        Args:
+        -collection:    the ID of the collection to be deposited into
+        -deposit:       the DepositRequest object to be processed
+        Returns a DepositResponse object which will contain the Deposit Receipt or a SWORD Error
+        """
+        # check against the authorised list of silos
+        rdf_silo = self._get_authorised_rdf_silo(silo)
 
-        # weed out unacceptable deposits
+        # ensure that we have a slug
         if deposit.slug is None:
             deposit.slug = str(uuid.uuid4())
+            
+        # weed out unacceptable deposits
         if rdf_silo.exists(deposit.slug):
             raise SwordError(error_uri=DataBankErrors.dataset_conflict, msg="A Dataset with the name " + deposit.slug + " already exists")
         if not allowable_id2(deposit.slug):
@@ -202,6 +213,7 @@ class SwordDataBank(SwordServer):
         new_manifest = s.serialise_rdf(rdf_string)
         item.put_stream("manifest.rdf", new_manifest)
 
+        # FIXME: here is where we have to put the correct treatment in
         # now generate a receipt for the deposit
         receipt = self.deposit_receipt(silo, deposit.slug, item, "created new item")
 
@@ -222,62 +234,6 @@ class SwordDataBank(SwordServer):
         
         return dr
 
-        """
-        This is our reference for deposit_new ...
-        
-        params = request.POST
-            if params.has_key("id"):
-                if c_silo.exists(params['id']):
-                    response.content_type = "text/plain"
-                    response.status_int = 409
-                    response.status = "409 Conflict: Dataset Already Exists"
-                    return "Dataset Already Exists"
-                else:
-                    # Supported params:
-                    # id, title, embargoed, embargoed_until, embargo_days_from_now
-                    id = params['id']
-                    if not allowable_id2(id):
-                        response.content_type = "text/plain"
-                        response.status_int = 403
-                        response.status = "403 Forbidden"
-                        return "Dataset name can contain only the following characters - %s and has to be more than 1 character"%ag.naming_rule
-                    del params['id']
-                    item = create_new(c_silo, id, ident['repoze.who.userid'], **params)
-                    
-                    # Broadcast change as message
-                    ag.b.creation(silo, id, ident=ident['repoze.who.userid'])
-                    
-                    # conneg return
-                    accept_list = None
-                    if 'HTTP_ACCEPT' in request.environ:
-                        try:
-                            accept_list = conneg_parse(request.environ['HTTP_ACCEPT'])
-                        except:
-                            accept_list= [MT("text", "html")]
-                    if not accept_list:
-                        accept_list= [MT("text", "html")]
-                    mimetype = accept_list.pop(0)
-                    while(mimetype):
-                        if str(mimetype).lower() in ["text/html", "text/xhtml"]:
-                            redirect_to(controller="datasets", action="datasetview", silo=silo, id=id)
-                        elif str(mimetype).lower() in ["text/plain", "application/json"]:
-                            response.content_type = "text/plain"
-                            response.status_int = 201
-                            response.status = "201 Created"
-                            response.headers["Content-Location"] = url(controller="datasets", action="datasetview", silo=silo, id=id)
-                            return "201 Created"
-                        try:
-                            mimetype = accept_list.pop(0)
-                        except IndexError:
-                            mimetype = None
-                    # Whoops - nothing satisfies - return text/plain
-                    response.content_type = "text/plain"
-                    response.status_int = 201
-                    response.headers["Content-Location"] = url(controller="datasets", action="datasetview", silo=silo, id=id)
-                    response.status = "201 Created"
-                    return "201 Created"
-        """
-
     def get_media_resource(self, path, accept_parameters):
         """
         Get a representation of the media resource for the given id as represented by the specified content type
@@ -294,30 +250,8 @@ class SwordDataBank(SwordServer):
         - deposit:  a DepositRequest object
         Return a DepositResponse containing the Deposit Receipt or a SWORD Error
         """
-        # FIXME: where should we check MD5 checksums?  Could be costly to do this
-        # inline with large files
-        
-        # FIXME: do we care if an On-Behalf-Of deposit is made, but mediation is
-        # turned off?  And should this be pushed up to the pylons layer?
-
-        # first thing to do is deconstruct the path into silo/dataset
-        silo, dataset_id = path.split("/", 1)
-        
-        if not ag.granary.issilo(silo):
-            return SwordError(status=404, empty=True)
-
-        granary_list = ag.granary.silos
-        silos = ag.authz(granary_list, deposit.auth.identity)      
-        
-        if silo not in silos:
-            # FIXME: if it exists, but we can't deposit, we need to 403
-            raise SwordError(status=404, empty=True)
-        
-        # get a full silo object
-        rdf_silo = ag.granary.get_rdf_silo(silo)
-        
-        if not rdf_silo.exists(dataset_id):
-            raise SwordError(status=404, empty=True)
+        silo, dataset_id, accept_parameters = self.um.interpret_path(path)
+        rdf_silo = self._get_authorised_rdf_silo(silo)
             
         # now get the dataset object itself
         dataset = rdf_silo.get_item(dataset_id)
@@ -393,6 +327,12 @@ class SwordDataBank(SwordServer):
         dataset.del_triple(dataset.uri, u"sword:originalDeposit")
         dataset.del_triple(dataset.uri, u"sword:state")
         
+        # FIXME: also unsafe in the same way as above
+        # Write the md5 checksum into the manifest
+        dataset.del_triple("*", u"oxds:hasMD5")
+        if deposit.content_md5 is not None:
+            dataset.add_triple(deposit_uri, u"oxds:hasMD5", deposit.content_md5)
+        
         dataset.sync()
 
         # the aggregation uri
@@ -401,6 +341,15 @@ class SwordDataBank(SwordServer):
         # the Edit-URI
         edit_uri = self.um.edit_uri(silo, dataset_id)
 
+        # FIXME: here we also need to keep existing states where relevant.
+        #   A state will continue to be relevant if it applies to an area of the
+        #   item (i.e. the container or the media resource) for which this operation
+        #   has no effect.
+        #   for example:
+        #   this is a metadata replace, but a status on the item is set to say that
+        #   the item's zip file is corrupt and needs replacing.  The new status 
+        #   should leave this alone (and probably not do anything, tbh), no matter
+        #   what else it does
         # create the statement outline
         # FIXME: there is something weird going on with instantiating this object without the original_deposits argument
         # apparently if I don't explicitly say there are no original deposits, then it "remembers" original deposits 
@@ -413,24 +362,15 @@ class SwordDataBank(SwordServer):
         if deposit_uri is not None:
             s.original_deposit(deposit_uri, datetime.now(), deposit.packaging, by, obo)
         
-        # NOTE: there are no derived resource uris at this point
-        #s.aggregates = derived_resource_uris
-        
-        # add the original deposit (which sorts out the aggregations for us too)
-        #ssslog.debug("Original Deposits: " + str(s.original_deposits))
-        #s.original_deposit(deposit_uri, datetime.now(), deposit.packaging, None, None)
-        #ssslog.debug("Original Deposits: " + str(s.original_deposits))
-
         # create the new manifest and store it
         manifest = dataset.get_rdf_manifest()
         f = open(manifest.filepath, "r")
         rdf_string = f.read()
         
         new_manifest = s.serialise_rdf(rdf_string)
-        ssslog.debug("New Manifest: " + new_manifest)
-        
         dataset.put_stream("manifest.rdf", new_manifest)
         
+        # FIXME: add in proper treatment here
         # now generate a receipt
         receipt = self.deposit_receipt(silo, dataset_id, dataset, "added zip to dataset")
         
@@ -443,75 +383,6 @@ class SwordDataBank(SwordServer):
         dr.receipt = receipt.serialise()
         dr.location = receipt.edit_uri
         return dr
-        """
-        Here's our reference for this method:
-        
-        # File upload by a not-too-savvy method - Service-orientated fallback:
-                # Assume file upload to 'filename'
-                params = request.POST
-                item = c_silo.get_item(id)
-                filename = params.get('filename')
-                if not filename:
-                    filename = params['file'].filename
-                upload = params.get('file')
-                if JAILBREAK.search(filename) != None:
-                    abort(400, "'..' cannot be used in the path or as a filename")
-                target_path = filename
-                
-                if item.isfile(target_path):
-                    code = 204
-                elif item.isdir(target_path):
-                    response.content_type = "text/plain"
-                    response.status_int = 403
-                    response.status = "403 Forbidden"
-                    return "Cannot POST a file on to an existing directory"
-                else:
-                    code = 201
-
-                if filename == "manifest.rdf":
-                    #Copy the uploaded file to a tmp area 
-                    mani_file = os.path.join('/tmp', filename.lstrip(os.sep))
-                    mani_file_obj = open(mani_file, 'w')
-                    shutil.copyfileobj(upload.file, mani_file_obj)
-                    upload.file.close()
-                    mani_file_obj.close()
-                    #test rdf file
-                    mani_file_obj = open(mani_file, 'r')
-                    manifest_str = mani_file_obj.read()
-                    mani_file_obj.close()
-                    if not test_rdf(manifest_str):
-                        response.status_int = 400
-                        return "Bad manifest file"
-                    #munge rdf
-                    item.increment_version_delta(clone_previous_version=True, copy_filenames=['manifest.rdf'])
-                    a = item.get_rdf_manifest()
-                    b = a.to_string()
-                    munge_manifest(manifest_str, item)
-                else:
-                    if code == 204:
-                        item.increment_version_delta(clone_previous_version=True, copy_filenames=['manifest.rdf', filename])
-                    else:
-                        item.increment_version_delta(clone_previous_version=True, copy_filenames=['manifest.rdf'])
-                    item.put_stream(target_path, upload.file)
-                    upload.file.close()
-                item.del_triple(item.uri, u"dcterms:modified")
-                item.add_triple(item.uri, u"dcterms:modified", datetime.now())
-                item.del_triple(item.uri, u"oxds:currentVersion")
-                item.add_triple(item.uri, u"oxds:currentVersion", item.currentversion)
-                item.sync()
-                
-                if code == 201:
-                    ag.b.creation(silo, id, target_path, ident=ident['repoze.who.userid'])
-                    response.status = "201 Created"
-                    response.status_int = 201
-                    response.headers["Content-Location"] = url(controller="datasets", action="itemview", id=id, silo=silo, path=filename)
-                    response_message = "201 Created. Added file %s to item %s" % (filename, id)
-                else:
-                    ag.b.change(silo, id, target_path, ident=ident['repoze.who.userid'])
-                    response.status = "204 Updated"
-                    response.status_int = 204
-                    response_message = None
-        """
 
     def delete_content(self, path, delete):
         """
@@ -546,26 +417,9 @@ class SwordDataBank(SwordServer):
 
         ssslog.info("Container requested in mime format: " + accept_parameters.content_type.mimetype())
 
-        # first thing to do is deconstruct the path into silo/dataset
-        silo, dataset_id = path.split("/", 1)
+        silo, dataset_id, _ = self.um.interpret_path(path)
+        rdf_silo = self._get_authorised_rdf_silo(silo)
         
-        if not ag.granary.issilo(silo):
-            return SwordError(status=404, empty=True)
-
-        silos = ag.granary.silos
-        
-        # FIXME: incorporate authentication
-        #silos = ag.authz(granary_list, ident)      
-        if silo not in silos:
-            # FIXME: if it exists, but we can't deposit, we need to 403
-            raise SwordError(status=404, empty=True)
-        
-        # get a full silo object
-        rdf_silo = ag.granary.get_rdf_silo(silo)
-        
-        if not rdf_silo.exists(dataset_id):
-            raise SwordError(status=404, empty=True)
-            
         # now get the dataset object itself
         dataset = rdf_silo.get_item(dataset_id)
 
@@ -603,24 +457,8 @@ class SwordDataBank(SwordServer):
         raise NotImplementedError()
 
     def get_statement(self, path):
-        accept_parameters, silo, dataset_id = self.um.interpret_statement_path(path)
-        
-        if not ag.granary.issilo(silo):
-            return SwordError(status=404, msg="silo is not a silo")
-
-        silos = ag.granary.silos
-        
-        # FIXME: incorporate authentication
-        #silos = ag.authz(granary_list, ident)      
-        if silo not in silos:
-            # FIXME: if it exists, but we can't deposit, we need to 403
-            raise SwordError(status=404, msg="silo is not in the allowed list")
-        
-        # get a full silo object
-        rdf_silo = ag.granary.get_rdf_silo(silo)
-        
-        if not rdf_silo.exists(dataset_id):
-            raise SwordError(status=404, msg="dataset does not exist in silo")
+        silo, dataset_id, accept_parameters = self.um.interpret_path(path)
+        rdf_silo = self._get_authorised_rdf_silo(silo)
             
         # now get the dataset object itself
         dataset = rdf_silo.get_item(dataset_id)
@@ -637,7 +475,7 @@ class SwordDataBank(SwordServer):
     # resources.  Not implementing them is fine.  If they are not implemented
     # then you just have to make sure that your file paths don't rely on the
     # Part http handler
-     
+    
     def get_part(self, path):
         """
         Get a file handle to the part identified by the supplied path
@@ -693,7 +531,7 @@ class SwordDataBank(SwordServer):
 
         # ensure that there is a metadata object, and that it is populated with enough information to build the
         # deposit receipt
-        dc_metadata, other_metadata = self.extract_metadata(item)
+        dc_metadata, other_metadata = self._extract_metadata(item)
         ssslog.debug("Incorporating metadata: " + str(dc_metadata))
         if dc_metadata is None:
             dc_metadata = {}
@@ -715,19 +553,18 @@ class SwordDataBank(SwordServer):
                             verbose_description=verbose_description, treatment=treatment)
 
         return dr
-        
-    def extract_metadata(self, item):
+    
+    # FIXME: currently this only deals with DC metadata as per the SWORD spec.
+    # If possible, we should extract other metadata from the item too, but since
+    # it is in RDF it's not so obvious how best to do it.  Just pull out rdf
+    # terms?
+    def _extract_metadata(self, item):
         graph = item.get_graph()
         dc_metadata = {}
         other_metadata = {}
         # we're just going to focus on DC metadata, to comply with the SWORD
         # spec
         dc_offset = len(self.ns.DC_NS)
-        
-        # debug!
-        #ssslog.debug("Item URI: " + item.uri)
-        #ssslog.debug("Extracting metadata from: " + str(graph.triples((None, None, None))))
-        #for triple in graph.triples((URIRef(item.uri), None, None)):
         
         for s, p, o in graph.triples((URIRef(item.uri), None, None)):
             if p.startswith(self.ns.DC_NS):
@@ -746,24 +583,39 @@ class SwordDataBank(SwordServer):
         
     def _ingest_metadata(self, item, deposit):
         ed = deposit.get_entry_document()
+        entry_ingester = self.config.get_entry_ingester()()
+        entry_ingester.ingest(item, ed)
+
+class DefaultEntryIngester(object):
+    def __init__(self):
+        # FIXME: a fuller treatment of atom metadata may be appropriate here
+        self.metadata_map = {
+            "atom_title" : u"dcterms:title",
+            "atom_summary" : u"dcterms:abstract"
+        }
+        # NOTE: much atom metadata is hierarchical so this approach may
+        # not work
+        
+    def ingest(self, item, entry, additive=False):
+        ssslog.debug("Ingesting Metadata; Additive? " + str(additive))
         
         # try and map the standard atom elements first
-        for k, vs in ed.other_metadata.iteritems():
-            if k == "atom_title":
-                for v in vs:
-                    item.add_triple(item.uri, "dcterms:title", v)
-            if k == "atom_summary":
-                for v in vs:
-                    item.add_triple(item.uri, "dcterms:abstract", v)
-            # FIXME: a fuller treatment of atom metadata may be appropriate here
+        for k, vs in entry.other_metadata.iteritems():
+            if not self.metadata_map.has_key(k):
+                # FIXME: only process metadata we recognise
+                continue
+            
+            # for each value add the relevant field
+            for v in vs:
+                item.add_triple(item.uri, self.metadata_map[k], v)
         
-        for dc, values in ed.dc_metadata.iteritems():
+        # explicitly handle the DC
+        for dc, values in entry.dc_metadata.iteritems():
             for v in values:
-                item.add_triple(item.uri, "dcterms:" + dc, v)
-        # FIXME: for the moment we just comply with the SWORD spec requirements
-        # to support dc metadata.  Other forms of metadata can be dealt with later
+                item.add_triple(item.uri, u"dcterms:" + dc, v)
+        
         item.sync()
-    
+
 class DataBankAuthenticator(Authenticator):
     def __init__(self, config): 
         self.config = config
@@ -855,20 +707,6 @@ class URLManager(object):
             silo = path
             
         return silo, dataset_id, accept_parameters
-    
-    # FIXME: we want to get rid of this method in favour of interpret_path
-    def interpret_statement_path(self, path):
-        accept_parameters = None
-        if path.endswith("rdf"):
-            accept_parameters = AcceptParameters(ContentType("application/rdf+xml"))
-            path = path[:-4]
-        elif path.endswith("atom"):
-            accept_parameters = AcceptParameters(ContentType("application/atom+xml;type=feed"))
-            path = path[:-5]
-            
-        silo, dataset_id = path.split("/", 1)
-
-        return accept_parameters, silo, dataset_id
         
 class DataBankErrors(object):
     dataset_conflict = "http://databank.ox.ac.uk/errors/DatasetConflict"
