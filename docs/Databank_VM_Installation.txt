@@ -2,7 +2,7 @@ Databank VM Setup
 ------------------------------------------------------------------------------------------------------
 I. Virtual machine details
 ------------------------------------------------------------------------------------------------------
-Ubuntu 10.04.1 32 bit i386
+Ubuntu 11.10 server i386
 512MB RAM
 8GB Harddrive (all of hard disk not allocated at the time of creation)
 Network: NAT
@@ -23,13 +23,9 @@ Install Grub boot loader to master boot record
 II. Packages to be Installed
 ------------------------------------------------------------------------------------------------------
     sudo apt-get install build-essential
-    sudo vim /etc/apt/sources.list  
-         add  the following repository to the list
-         deb http://archive.canonical.com/ lucid partner 
     sudo apt-get update
     sudo apt-get install openssh-server
-    sudo apt-get install sun-java6-jdk
-         Accept the licenses
+    sudo apt-get install openjdk-6-jre
     sudo apt-get install python-dev
     sudo apt-get install curl
     sudo apt-get install links2
@@ -42,16 +38,17 @@ II. Packages to be Installed
     sudo apt-get install python-setuptools
     sudo apt-get install python-libxml2
     sudo apt-get install python-libxslt1
+    sudo apt-get install python-pylons
+    sudo apt-get install python-rdflib
+    sudo apt-get install python-dateutil
+
     sudo easy_install pairtree==0.5.6-T
-    sudo easy_install pylons==0.9.7
     sudo easy_install repoze.who==2.0a4
-    sudo easy_install rdflib==2.4.2
     sudo easy_install solrpy
-    sudo easy_install uuid
-    sudo easy_install python-dateutil==1.5
 
     Installing profilers in python and pylons to obtain run time performance and other stats
-    Note: This is only needed in development machines. See the note below about running Pylons in debug mode (section B)
+    Note: This package is OPTIONAL and is only needed in development machines. 
+          See the note below about running Pylons in debug mode (section B)
     sudo apt-get install python-profiler
     sudo easy_install repoze.profile
 
@@ -112,16 +109,16 @@ Pulling Recordsilo and Databank from github
 
     Clone/Pull Recordsilo and install the latest vesion. Currently the latest version is 0.4.14. 
     
-    git clone git@github.com:anusharanganathan/RecordSilo.git
+    git clone git://github.com/anusharanganathan/RecordSilo.git
     cd RecordSilo/dist
-    sudo easy_install RecordSilo-0.4.14-py2.6.egg 
+    sudo easy_install RecordSilo-0.4.14-py2.x.egg (2.x - depending on whether you are running python 2.6 / python 2.7)  
 
     Clone/Pull RDFDatabank
     cd /opt
     sudo mkdir RDFDatabank
     sudo chown www-data:demoSystemUser RDFDatabank/
     sudo chmod 775 RDFDatabank/ 
-    git clone git@github.com:anusharanganathan/RDFDatabank.git RDFDatabank/
+    git clone git://github.com/dataflow/RDFDatabank.git RDFDatabank/
     
     /opt/RDFDatabank is the root directory running the databank instance. You can move this to any other place of your choice.
 
@@ -158,24 +155,30 @@ In the file production.ini, edit the folllowing:
 
 ------------------------------------------------------------------------------------------------------
 IV. Create the main admin user to access Databank
+
+TODO: This section uses htpasswd and a python file to manage user groups and roles.
+      This would best be replaced by a DB lookup or similar.
 ------------------------------------------------------------------------------------------------------     
-Create a file 'passwd' in the root directory of RDFDatabank using 'htpasswd' and add a user to the passwd file.
-OR copy the file passwd-default to passwd
+1. Create a file 'passwd' in the root directory of RDFDatabank using 'htpasswd' and add a user to the passwd file.
+   OR copy the file passwd-default to passwd
 
-The passwd-default file has two users whose username, password are as given below. 
-    admin, test
-    sandbox_user, sandbox
-Please note, these user accounts are just for demonstration and would have to be changed for a production instance.
+   The passwd-default file has users whose username, password and roles are as given in the file rdfdatabank/tests/userRolesForTesting.txt.  
+   These user accounts are just for demonstration and would have to be changed for a production instance.
 
-To create the pssswd file
-    cd RDFDatabank/
-    htpasswd -c passwd admin
+   To create a new pssswd file with the username 'admin'.
+   Note: To start off you just need to create this one username and password. This user will be the main databank administrator.
+      cd RDFDatabank/
+      htpasswd -c passwd admin
 
- [enter admin password]   
+      [enter admin password]   
 
-Create and add data to the file rdfdatabank/config/users.py.
-    You would need to create a file called 'users.py' in add data for the main admin user (added earlier into htpasswd) by hand currently.
-OR copy the file users-default.py to rdfdatabank/config/users.py
+2. Create and add data to the file rdfdatabank/config/users.py.
+   OR copy the file rdfdatabank/config/users-default.py to rdfdatabank/config/users-.py.
+   
+   Currently, you need to create a file called 'users.py' in rdfdatabank/config/ and populate the file with the data for each of the users you had added into the passwd file.
+   You just need to define the user for the main admin account user ('admin' - added earlier into htpasswd). You can create further users using the Databank web interface.
+
+   Alternatively, you can copy the file rdfdatabank/config/users-default.py to rdfdatabank/config/users.py     
     
 If creating the users.py file:
     The data to add should look like this
@@ -198,9 +201,7 @@ _USERS = {
     
     Examples for owner:
         'owner': '*',
-        'owner': 'my_first_silo,sandbox,my_second_silo',  
-
-    The file has a variable _USERS used by ./rdfdatabank/lib/ident_md.py which would best be replaced by a DB lookup or similar. 
+        'owner': 'my_first_silo,sandbox,my_second_silo', 
 
 ------------------------------------------------------------------------------------------------------
 V. Integrate Databank with Datacite, for minting DOIs (this section is optional)
