@@ -588,10 +588,17 @@ class SwordDataBank(SwordServer):
 
 class DefaultEntryIngester(object):
     def __init__(self):
+        self.ns = Namespaces()
+        
+        # FIXME: could we put this into configuration?
+        #           or we could define handlers for each element rather than
+        #           just a field to put the value in.  This will allow us to
+        #           handle hierarchical metadata (e.g. atom:author), but without
+        #           having to go down the route of building XSLT xwalks
         # FIXME: a fuller treatment of atom metadata may be appropriate here
         self.metadata_map = {
-            "atom_title" : u"dcterms:title",
-            "atom_summary" : u"dcterms:abstract"
+            self.ns.ATOM + "title" : u"dcterms:title",
+            self.ns.ATOM + "summary" : u"dcterms:abstract"
         }
         # NOTE: much atom metadata is hierarchical so this approach may
         # not work
@@ -599,15 +606,14 @@ class DefaultEntryIngester(object):
     def ingest(self, item, entry, additive=False):
         ssslog.debug("Ingesting Metadata; Additive? " + str(additive))
         
-        # try and map the standard atom elements first
-        for k, vs in entry.other_metadata.iteritems():
-            if not self.metadata_map.has_key(k):
+        ssslog.debug("Non DC Metadata: " + str(entry.other_metadata))
+        for element in entry.other_metadata:
+            if not self.metadata_map.has_key(element.tag):
                 # FIXME: only process metadata we recognise
+                ssslog.debug("skipping unrecognised metadata: " + element.tag)
                 continue
-            
-            # for each value add the relevant field
-            for v in vs:
-                item.add_triple(item.uri, self.metadata_map[k], v)
+            if element.text is not None:
+                item.add_triple(item.uri, self.metadata_map[element.tag], element.text.strip())
         
         # explicitly handle the DC
         for dc, values in entry.dc_metadata.iteritems():
