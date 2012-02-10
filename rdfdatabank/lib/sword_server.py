@@ -266,12 +266,16 @@ class SwordDataBank(SwordServer):
         #
         # first figure out what to do about the metadata
         keep_atom = False
+        metadata_state = None # This will be used to store any state information associated
+                                # with a metadata update.  It gets tied up with the content state
+                                # and any pre-existing states further down
         #if deposit.atom is not None:
         #    ssslog.info("Replace request has ATOM part - updating")
         #    entry_ingester = self.configuration.get_entry_ingester()(self.dao)
         #    entry_ingester.ingest(collection, id, deposit.atom)
         #    keep_atom = True
-            
+        
+        content_state = None
         deposit_uri = None
         derived_resource_uris = []
         if deposit.content is not None:
@@ -301,6 +305,9 @@ class SwordDataBank(SwordServer):
             # An identifier which will resolve to the package just deposited
             deposit_uri = self.um.file_uri(silo, dataset_id, deposit.filename)
             ssslog.debug("Incoming file has been stored at URI " + deposit_uri)
+            
+            # register a new content state to be used
+            content_state = DataBankStates.zip_file_added
 
         # Taken from dataset.py, seems to be the done thing when adding an item.
         # NOTE: confirmed with Anusha that this is correct
@@ -308,11 +315,46 @@ class SwordDataBank(SwordServer):
         dataset.add_triple(dataset.uri, u"dcterms:modified", datetime.now())
         dataset.del_triple(dataset.uri, u"oxds:currentVersion")
         dataset.add_triple(dataset.uri, u"oxds:currentVersion", dataset.currentversion)
+
+        # before we do any state management, we have to be sure that the sword namespace
+        # is registered
+        dataset.get_rdf_manifest().add_namespace("sword", "http://purl.org/net/sword/terms/")
+        dataset.sync()
+        
+        # sort out the new list of states for the item
+        current_states = self._extract_states(dataset)
+        new_states = []
+        
+        # for each existing state, consider whether to carry it over
+        ssslog.info("new content state: " + str(content_state))
+        for state_uri, state_desc in current_states:
+            keep = True
+            if metadata_state is not None and state_uri in DataBankStates.metadata_states:
+                # we do not want the state if it is a metadata state and we have been given
+                # a new metadata state
+                keep = False
+            if content_state is not None and state_uri in DataBankStates.content_states:
+                    ssslog.debug("Removing state: " + state_uri)
+                    # we do not want the state if it is a content state and we have been given
+                    # a new content state
+                    keep = False
+            
+            if keep:
+                ssslog.debug("carrying over state: " + state_uri)
+                new_states.append((state_uri, state_desc))
+        
+        # add the new metadata and content states provided from above
+        if metadata_state is not None:
+            new_states.append(metadata_state)
+        if content_state is not None:
+            ssslog.debug("adding new content state: " + str(content_state))
+            new_states.append(content_state)
+            
+        ssslog.debug("New Dataset States: " + str(new_states))
         
         # FIXME: how safe is this?  What other ore:aggregates might there be?
         # we need to back out some of the triples in preparation to update the
         # statement
-        dataset.get_rdf_manifest().add_namespace("sword", "http://purl.org/net/sword/terms/")
         aggregates = dataset.list_rdf_objects(dataset.uri, u"ore:aggregates")
         original_deposits = dataset.list_rdf_objects(dataset.uri, u"sword:originalDeposit")
         states = dataset.list_rdf_objects(dataset.uri, u"sword:state")
@@ -354,7 +396,7 @@ class SwordDataBank(SwordServer):
         # FIXME: there is something weird going on with instantiating this object without the original_deposits argument
         # apparently if I don't explicitly say there are no original deposits, then it "remembers" original deposits 
         # from previous uses of the object
-        s = Statement(aggregation_uri=agg_uri, rem_uri=edit_uri, states=[DataBankStates.zip_file_added], original_deposits=[])
+        s = Statement(aggregation_uri=agg_uri, rem_uri=edit_uri, states=new_states, original_deposits=[])
          
         # set the original deposit (which sorts out the aggregations for us too)
         by = deposit.auth.username if deposit.auth is not None else None
@@ -585,6 +627,17 @@ class SwordDataBank(SwordServer):
         ed = deposit.get_entry_document()
         entry_ingester = self.config.get_entry_ingester()()
         entry_ingester.ingest(item, ed)
+        
+    def _extract_states(self, dataset):
+        states = []
+        state_uris = dataset.list_rdf_objects(dataset.uri, u"sword:state")
+        for su in state_uris:
+            descriptions = dataset.list_rdf_objects(su, u"sword:stateDescription")
+            sd = None
+            if len(descriptions) > 0:
+                sd = str(descriptions[0]) # just take the first one, there should only be one
+            states.append((str(su), sd))
+        return states
 
 class DefaultEntryIngester(object):
     def __init__(self):
@@ -718,5 +771,7 @@ class DataBankErrors(object):
     dataset_conflict = "http://databank.ox.ac.uk/errors/DatasetConflict"
     
 class DataBankStates(object):
-    initial_state = ("http://databank.ox.ac.uk/state/NewDatasetContainer", "Only the container for the dataset has been created so far")
+    initial_state = ("http://databank.ox.ac.uk/state/EmptyContainer", "Only the container for the dataset has been created so far")
     zip_file_added = ("http://databank.ox.ac.uk/state/ZipFileAdded", "The dataset contains only the zip file")
+    content_states = [u"http://databank.ox.ac.uk/state/EmptyContainer", u"http://databank.ox.ac.uk/state/ZipFileAdded"]
+    metadata_states = []
