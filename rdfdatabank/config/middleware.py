@@ -52,6 +52,11 @@ def make_app(global_conf, full_stack=True, static_files=True, **app_conf):
 
     # FIXME: we need to figure out how to correctly configure this for SWORD support, 
     # which will need to bypass the custom error pages in some cases
+    #
+    # For the time being I have commented this out, so that we can test with
+    # DataStage
+    
+    """
     
     # CUSTOM MIDDLEWARE HERE (filtered by error handling middlewares)
     if asbool(full_stack):
@@ -64,6 +69,7 @@ def make_app(global_conf, full_stack=True, static_files=True, **app_conf):
             app = StatusCodeRedirect(app)
         else:
             app = StatusCodeRedirect(app, [400, 401, 403, 404, 500])
+    """
     
     app = make_who_with_config(app, global_conf, app_conf['who.config_file'], app_conf['who.log_file'], app_conf['who.log_level'])
 
