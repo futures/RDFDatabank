@@ -17,6 +17,11 @@
 </%def>
 
 <h1>Dataset ${c.id}</h1>
+% if c.version:
+<h3>Version ${c.version}</h3>
+% elif c.versions:
+<h3>Version ${c.versions[-1]}</h3>
+% endif
 
 <!-- View Information -->
 % if c.editor:

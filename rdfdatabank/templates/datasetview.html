@@ -22,6 +22,11 @@
 c.current = c.id
 %>
 <h1>Dataset ${c.id}</h1>
+% if c.version:
+<h3>Version ${c.version}</h3>
+% elif c.versions:
+<h3>Version ${c.versions[-1]}</h3>
+% endif
 
 % if c.editor:
   <div id="editor_view">
@@ -70,7 +75,7 @@ c.current = c.id
 <!-- Version of Datapackage -->
 <div class="dataset_info">
 % if c.version and c.versions and c.version == c.versions[-1]: 
-<p>You are currently viewing the <b>latest version (${c.versions[-1]})</b> of the data package</p>
+<p>You are currently viewing the <b>latest version (${c.version})</b> of the data package</p>
 % elif c.version: 
 <p>You are currently viewing <b> version ${c.version}</b> of the data package</p>
 % elif c.versions:
@@ -109,8 +114,8 @@ c.current = c.id
 <div class="dataset_info">
 % if c.embargos and c.current in c.embargos and c.embargos[c.current]:
  <% c.emb = c.embargos[c.current] %>
-  % if c.emb[0] == True or c.emb[0] == 1 or (isinstance(c.emb[0], basestring) and c.emb[0].lower() in ['true', '1']):
-     % if c.emb[1]:
+  % if c.emb[0] == True or c.emb[0] == 1 or (isinstance(c.emb[0], basestring) and c.emb[0].strip().lower() in ['true', '1']):
+     % if (isinstance(c.emb[1], basestring) and c.emb[1].strip()):
         Data package is embargoed until ${c.emb[1]}. Only the metadata is openly accessible.
      % else:
         Data package is embargoed indefinitely. Only the metadata is openly accessible.
@@ -148,7 +153,8 @@ c.current = c.id
 <!-- RDF Manifest -->
 <h3><b>Metadata</b></h3>
 <div class="dataset_info">
-<pre>${c.manifest_pretty}</pre>
+<!-- <pre>${c.manifest_pretty}</pre> -->
+<%include file="/rdf_manifest.html"/>
 </div>
 
 </div>

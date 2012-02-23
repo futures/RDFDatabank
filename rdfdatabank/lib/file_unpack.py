@@ -70,7 +70,8 @@ def get_zipfiles_in_dataset(dataset):
                 real_filepath = os.readlink(real_filepath)
             if check_file_mimetype(real_filepath, 'application/zip'): 
                 (fn, ext) = os.path.splitext(filepath)
-                zipfiles[filepath]="%s-%s"%(dataset.item_id, fn)
+                #zipfiles[filepath]="%s-%s"%(dataset.item_id, fn)
+                zipfiles[filepath]=dataset.item_id
     return zipfiles
 
 def store_zipfile(silo, target_item_uri, POSTED_file, ident):
@@ -162,7 +163,6 @@ def unpack_zip_item(target_dataset, current_dataset, zip_item, silo, ident):
     filepath = current_dataset.to_dirpath(zip_item)
     if os.path.islink(filepath):
         filepath = os.readlink(filepath)
-
     emb = target_dataset.metadata.get('embargoed')
     emb_until = target_dataset.metadata.get('embargoed_until')
 
@@ -173,7 +173,7 @@ def unpack_zip_item(target_dataset, current_dataset, zip_item, silo, ident):
     file_uri = current_dataset.uri
     if not file_uri.endswith('/'):
         file_uri += '/'
-    file_uri = "%s%s"%(file_uri,zip_item)
+    file_uri = "%s%s?version=%s"%(file_uri,zip_item,current_dataset.currentversion)
      
     items_list = []
     os.path.walk(unpacked_dir,get_items_in_dir,items_list)

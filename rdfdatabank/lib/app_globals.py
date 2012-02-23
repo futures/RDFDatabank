@@ -34,6 +34,7 @@ from rdfdatabank.lib.htpasswd import HtpasswdFile
 from rdfdatabank.lib.broadcast import BroadcastToRedis
 
 from rdfdatabank.config.users import _USERS
+from rdfdatabank.config.namespaces import NAMESPACES, PREFIXES
 
 class Globals(object):
 
@@ -51,6 +52,8 @@ class Globals(object):
         
         self.authz = authz
         self.users = _USERS
+        self.NAMESPACES = NAMESPACES
+        self.PREFIXES = PREFIXES
 
         if config.has_key("granary.uri_root"):
             self.root = config['granary.uri_root']
@@ -60,17 +63,28 @@ class Globals(object):
             
         if config.has_key("redis.host"):
             self.redishost = config['redis.host']
-            self.r = Redis(self.redishost)
+            try:
+                self.r = Redis(self.redishost)
+            except:
+                self.r = None
+            if self.r and config.has_key("broadcast.to") and config['broadcast.to'] == "redis" and  config.has_key("broadcast.queue"):
+                self.b = BroadcastToRedis(config['redis.host'], config['broadcast.queue'])
+        else:
+            self.r = None
+            self.redishost = None
+            self.b = None
             
         if config.has_key("solr.host"):
             from solr import SolrConnection
             self.solrhost = config['solr.host']
-            self.solr = SolrConnection(self.solrhost)
+            try:
+                self.solr = SolrConnection(self.solrhost)
+            except:
+                self.solr = None
+        else:
+            self.solrhost = None
+            self.solr = None
         
-        if config.has_key("broadcast.to"):
-            if config['broadcast.to'] == "redis":
-                self.b = BroadcastToRedis(config['redis.host'], config['broadcast.queue'])
-
         if config.has_key("naming_rule"):
             self.naming_rule = config['naming_rule']
 

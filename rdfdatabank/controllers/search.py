@@ -123,8 +123,10 @@ class SearchController(BaseController):
             params['start'] = '0'
         if not 'rows' in params or not params['rows']:
             params['rows'] = '100'
-                    
-        result = ag.solr.raw_query(**params)
+        try:            
+            result = ag.solr.raw_query(**params)
+        except:
+            result = {}
         
         mimetype = accept_list.pop(0)
         while(mimetype):
@@ -175,8 +177,34 @@ class SearchController(BaseController):
         sort = request.params.get('sort', None)
         format = request.params.get('format', None)
         if not format:
-            format = 'html'
-        
+            accept_list = None
+            if 'HTTP_ACCEPT' in request.environ:
+                try:
+                    accept_list = conneg_parse(request.environ['HTTP_ACCEPT'])
+                except:
+                    accept_list= [MT("text", "html")]
+            if not accept_list:
+                accept_list= [MT("text", "html")]
+            mimetype = accept_list.pop(0)
+            while(mimetype):
+                if str(mimetype).lower() in ["text/html", "text/xhtml"]:
+                    format = 'html'
+                    break
+                elif str(mimetype).lower() in ["text/plain", "application/json"]:
+                    format = 'json'
+                    break
+                elif str(mimetype).lower() in ["text/xml"]:
+                    format = 'xml'
+                    break
+                elif str(mimetype).lower() in ["text/csv"]:
+                    format = 'csv'
+                    break
+                try:
+                    mimetype = accept_list.pop(0)
+                except IndexError:
+                    mimetype = None
+            # Whoops - nothing satisfies - return text/plain
+            format = 'json'    
 
         c.sort = 'score desc'
         # Lock down the sort parameter.
@@ -300,17 +328,40 @@ class SearchController(BaseController):
                 solr_params['facet.field'] = []
                 for facet in c.fields_to_facet:
                     solr_params['facet.field'].append(facet)
-        
-            solr_response = ag.solr.raw_query(**solr_params)
-        
+
+            solr_response = None 
+            try:
+                solr_response = ag.solr.raw_query(**solr_params)
+            except:
+                pass
+
             c.add_facet =  u"%ssearch/detailed?q=%s&" % (ag.root, c.q.encode('utf-8'))
             c.add_facet = c.add_facet + urlencode(c.search) + filter_url
  
             if not solr_response:
-                # FAIL - do something here:
-                c.message = 'Sorry, either that search "%s" resulted in no matches, or the search service is not functional.' % c.q
-                h.redirect_to(controller='/search', action='index')
+                # conneg return
+                response.status_int = 200
+                response.status = "200 OK"
+                if format == "html":
+                    c.numFound = 0
+                    c.message = 'Sorry, either that search "%s" resulted in no matches, or the search service is not functional.' % c.q
+                    return render('/search.html')
+                elif format == 'xml':
+                    response.headers['Content-Type'] = 'application/xml'
+                    response.charset = 'utf8'
+                    c.atom = {}
+                    return render('/atom_results.html')
+                elif format == 'json':
+                    response.headers['Content-Type'] = 'application/json'
+                    response.charset = 'utf8'
+                    return {}
+                else:
+                    response.headers['Content-Type'] = 'application/text'
+                    response.charset = 'utf8'
+                    return solr_response
         
+            response.status_int = 200
+            response.status = "200 OK"
             if format == 'xml':
                 response.headers['Content-Type'] = 'application/xml'
                 response.charset = 'utf8'
@@ -426,8 +477,10 @@ class SearchController(BaseController):
                 solr_params['facet.field'] = []
                 for facet in c.fields_to_facet:
                     solr_params['facet.field'].append(facet)
-        
-            solr_response = ag.solr.raw_query(**solr_params)
+            try:
+                solr_response = ag.solr.raw_query(**solr_params)
+            except:
+                solr_response = None
         
             c.add_facet =  u"%ssearch/detailed?q=%s&" % (ag.root, c.q.encode('utf-8'))
             c.add_facet = c.add_facet + urlencode(c.search) + filter_url

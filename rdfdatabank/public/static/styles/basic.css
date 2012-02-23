@@ -1168,3 +1168,8 @@ span#itemsppt a.active:hover, span#itemsppb a.active:hover {
     padding-left: 20px;
     min-height: 20px;
 }
+
+.metadata td div {
+    max-height: 150px;
+    overflow: auto;
+}
