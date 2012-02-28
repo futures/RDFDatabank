@@ -184,8 +184,11 @@ header.pageHeader h1 a:focus
 	color: #fff;
 }
 
-
-
+header.pageHeader h1 a span.small {
+  font-size: 0.7em;
+  padding-left: 5px;
+  letter-spacing: -0.1em;
+}
 
 header ul li,
 footer ul li

@@ -127,3 +127,6 @@ class Globals(object):
         if config.has_key("license"):
             self.license = config['license']
 
+        if config.has_key("api.version"):
+            self.api_version = config['api.version']
+
