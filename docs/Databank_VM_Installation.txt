@@ -84,17 +84,25 @@ Accept all of the default options
 Installing Redis (http://redis.io/)
     sudo apt-get install redis-server
         The data directory is at /var/lib/redis and the configuration is at /etc/redis
-        This installed version 21.2.0-1
+        This installed version 2:1.2.0-1
+        This is actually version 1.2.0-1 of redis whihc is very old. If on Lucid, download the debian package from Oneiric
+           sudo apt-get remove --purge redis-server
+           cd ~
+           wget http://ubuntu.intergenia.de/ubuntu//pool/universe/r/redis/redis-server_2.2.11-3_amd64.deb
+           sudo dpkg -i redis-server_2.2.11-3_amd64.deb
 
 Installing the python redis client
-    wget http://launchpadlibrarian.net/53067907/python-redis_2.0.0-1_all.deb
-    sudo dpkg -i python-redis_2.0.0-1_all.deb    
+    Get the latest version of the python-redis client from oneiric
+    wget http://de.archive.ubuntu.com/ubuntu/pool/universe/p/python-redis/python-redis_2.4.5-1_all.deb
+    sudo dpkg -i python-redis_2.4.5-1_all.deb
         I initially did sudo apt-get install python-redis. 
         This installed verison 0.6.1, which is the latest version available for Lucid amd64 architecture is 0.6.1, 
         so I removed the package using apt-get remove --purge python-redis
-        I then downloaded the latest debian package from Natty amd64 (https://launchpad.net/ubuntu/natty/amd64/python-redis/2.0.0-1)
-        using wget and installed it using dpkg
-        I did have a look at the backports but from what I saw, the necessary package isn't in there (http://packages.ubuntu.com/lucid-backports/python/)
+        I then downloaded the latest debian package from Oneiric amd64 using wget and installed it using dpkg
+        I did have a look at the backports but from what I saw, the necessary package isn't in there 
+
+Installing supervisor - to manage the message workers
+    sudo apt-get install supervisor
         
 Pulling Recordsilo and Databank from github
     Recordsilo is available at https://github.com/anusharanganathan/RecordSilo 
@@ -273,7 +281,45 @@ Copy the solr schema file from docs into your solr conf
     sudo /etc/init.d/tomcat6 start
 
 ------------------------------------------------------------------------------------------------------
-VIII. Making sure all of the needed folders are available and apache has access to all the needed parts
+VIII. Setup Supervisor
+------------------------------------------------------------------------------------------------------
+Items are indexed in SOLR from Databank, through redis using message queues
+The workers that run on these message queues are managed using supervisor
+
+    The related files are available in /opt/RDFDatabank/message_workers
+
+    Modify the file loglines.cfg - if the solr end point is not  http://localhost:8080/solr or databank root is not /opt/RDFDatabank
+        [worker_solr]
+        solrurl = http://localhost:8080/solr
+        dbroot = /opt/RDFDatabank
+
+    Modify the file workers_available/worker_broker.conf - if databank root is not /opt/RDFDatabank
+        [program:worker_broker]
+        directory = /opt/RDFDatabank/message_workers/
+        command = /opt/RDFDatabank/message_workers/broker.py %(process_num)s
+        stdout_logfile = /var/log/databank/broker.log
+
+    Modify the file workers_available/worker_solr.conf - if databank root is not /opt/RDFDatabank
+        [program:worker_solr]
+        directory = /opt/RDFDatabank/message_workers/
+        command = /opt/RDFDatabank/message_workers/solr_worker.py %(process_num)s
+        stdout_logfile = /var/log/databank/solr_worker.log
+
+    Stop supervisor, copy the following files to /etc/supervisor/conf.d/ and start supervisor
+        $ sudo /etc/init.d/supervisor stop
+        $ sudo cp workers_available/worker_broker.conf /etc/supervisor/conf.d/
+        $ sudo cp workers_available/worker_solr.conf /etc/supervisor/conf.d
+        $ sudo /etc/init.d/supervisor start
+
+    The controller for supervisor can be invoked with the command 'supervisorctl'
+        sudo supervisorctl
+        
+        This will list all of the jobs manged by supervisor and their current status.
+        You can start / stop / restart jobs from withon the controller.
+        For more info on supervisor, read http://supervisord.org/index.html
+
+------------------------------------------------------------------------------------------------------
+IX. Making sure all of the needed folders are available and apache has access to all the needed parts
 ------------------------------------------------------------------------------------------------------
 Apache runs as user www-data. Make sure the user www-data is able to read write to the following locations
     /opt/RDFDatabank
@@ -295,7 +341,7 @@ Create a folder called databank in /var/log/databank and change it's owner and p
     sudo chmod -R 775 /var/log/databank
 
 ------------------------------------------------------------------------------------------------------
-IX. Test your Pylons installation 
+X. Test your Pylons installation 
 ------------------------------------------------------------------------------------------------------
 Restart apache
   sudo /etc/init.d/apache2 restart
@@ -308,7 +354,7 @@ If you have problems with authorization, you can change the who.log_level to deb
 and restart apache so you can check the logs to see what's happening. The who.log_file is available at /var/log/databank/who.log
 
 ------------------------------------------------------------------------------------------------------
-X. Run the test code and make sure all the tests pass
+XI. Run the test code and make sure all the tests pass
 ------------------------------------------------------------------------------------------------------
 The test code is located at /opt/RDFDatabank/rdfdatabank/tests
 
