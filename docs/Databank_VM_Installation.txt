@@ -103,33 +103,38 @@ Installing the python redis client
 
 Installing supervisor - to manage the message workers
     sudo apt-get install supervisor
-        
-Pulling Recordsilo and Databank from github
-    Recordsilo is available at https://github.com/anusharanganathan/RecordSilo 
-    RDFDatabank is available at https://github.com/anusharanganathan/RDFDatabank
-    Recordsilo and RDFDatabank and kept in sync so at any period of time the latest egg file in 
-    Recordsilo/dist (https://github.com/anusharanganathan/RecordSilo/tree/master/dist) is comaptible with the code in the master branch of RDFDatabank 
-    
+
+Installing git        
     sudo apt-get install git-core git-doc
-    sudo mkdir ~/git-src
-    cd git-src
     If you want to clone the repository (to be able to commit changes), 
         setup git following the instructions in http://help.github.com/linux-set-up-git/
 
+Pulling Recordsilo from github
+    Recordsilo is available at https://github.com/anusharanganathan/RecordSilo 
+    Recordsilo and RDFDatabank and kept in sync so at any period of time the latest egg file in 
+    Recordsilo/dist (https://github.com/anusharanganathan/RecordSilo/tree/master/dist) is comaptible with the code in the master branch of RDFDatabank 
+    
     Clone/Pull Recordsilo and install the latest vesion. Currently the latest version is 0.4.14. 
     
+    sudo mkdir ~/git-src
+    cd git-src
     git clone git://github.com/anusharanganathan/RecordSilo.git
     cd RecordSilo/dist
     sudo easy_install RecordSilo-0.4.14-py2.x.egg (2.x - depending on whether you are running python 2.6 / python 2.7)  
 
-    Clone/Pull RDFDatabank
-    cd /opt
-    sudo mkdir RDFDatabank
-    sudo chown www-data:demoSystemUser RDFDatabank/
-    sudo chmod 775 RDFDatabank/ 
-    git clone git://github.com/dataflow/RDFDatabank.git RDFDatabank/
-    
-    /opt/RDFDatabank is the root directory running the databank instance. You can move this to any other place of your choice.
+Pulling Recordsilo and Databank from github
+    RDFDatabank is available at https://github.com/anusharanganathan/RDFDatabank
+
+    Clone/Pull RDFDatabank into its root directory
+    Previously Databank was installed in /opt/RDFDatabank/
+    Since creating a debian package, Databank is installed in /var/lib/databank/
+    Installing it in either place is fine. I shall herewith refer to the location of the Databank root directory with $DB_ROOT
+    where $DB_ROOT = /var/lib/databank/  (or /opt/RDFDatabank/)
+
+    sudo mkdir -p $DB_ROOT
+    sudo chown www-data:demoSystemUser $DB_ROOT
+    sudo chmod 775 $DB_ROOT 
+    git clone git://github.com/dataflow/RDFDatabank.git $DB_ROOT    
 
 ------------------------------------------------------------------------------------------------------
 III. Customizing Databank to your environment
@@ -252,20 +257,20 @@ class OxDataciteDoi():
 VI. Integrate Pylons with Apache
 ------------------------------------------------------------------------------------------------------
 1. Edit the file dispatch.wsgi 
-    Note: you only need to do this step if the root directory running the databank instance is not /opt/RDFDatabank)
+    Note: you only need to do this step if the root directory running the databank instance is not /var/lib/databank)
     In the mod_wsgi/dispatch.wsgi file, edit the location of your databank instance. 
-    Replace the string '/opt/RDFDatabank' with the complete path to the directory where you have installed Databank. 
+    Replace the string '/var/lib/databank' with the complete path to the directory where you have installed Databank ($DB_ROOT). 
 
 2. Add a new site in apache sites-available called databank-wsgi
 
-   There is a file provided to you in the docs dir called databank_wsgi (/opt/RDFDatabank/docs/apache_config/databank_wsgi).
-        If the root directory running the databank instance is not /opt/RDFDatabank, edit the location of your databank instance,
-        replacing the string '/opt/RDFDatabank' with the complete path to the directory where you have installed Databank.
+   There is a file provided to you in the docs dir called databank_wsgi ($DB_ROOT/docs/apache_config/databank_wsgi).
+        If the root directory running the databank instance is not /var/lib/databank, edit the location of your databank instance,
+        replacing the string '/var/lib/databank' with the complete path to the directory where you have installed Databank ($DB_ROOT).
    
        The apache log files are configured to be stored in  /var/log/apache2/. Agaian you can change this location.
        
         Copy the file docs/apache_config/databank_wsgi to /etc/apache/sites-available. 
-        $sudo cp /opt/RDFDatabank/docs/apache_config/databank_wsgi /etc/apache2/sites-available/
+        $sudo cp $DB_ROOT/docs/apache_config/databank_wsgi /etc/apache2/sites-available/
 
 3. Enable mod_wsgi and the site databank_wsgi. If the site default is enabled, disable that site.
     a2dissite 000-default
@@ -277,7 +282,7 @@ VII. Setup SOLR
 ------------------------------------------------------------------------------------------------------
 Copy the solr schema file from docs into your solr conf
     sudo /etc/init.d/tomcat6 stop
-    sudo cp /opt/RDFDatabank/docs/solr_config/conf/schema.xml /etc/solr/conf/
+    sudo cp $DB_ROOT/docs/solr_config/conf/schema.xml /etc/solr/conf/
     sudo /etc/init.d/tomcat6 start
 
 ------------------------------------------------------------------------------------------------------
@@ -286,23 +291,23 @@ VIII. Setup Supervisor
 Items are indexed in SOLR from Databank, through redis using message queues
 The workers that run on these message queues are managed using supervisor
 
-    The related files are available in /opt/RDFDatabank/message_workers
+    The related files are available in $DB_ROOT/message_workers
 
-    Modify the file loglines.cfg - if the solr end point is not  http://localhost:8080/solr or databank root is not /opt/RDFDatabank
+    Modify the file loglines.cfg - if the solr end point is not  http://localhost:8080/solr or databank root is not /var/lib/databank
         [worker_solr]
         solrurl = http://localhost:8080/solr
-        dbroot = /opt/RDFDatabank
+        dbroot = /var/lib/databank
 
-    Modify the file workers_available/worker_broker.conf - if databank root is not /opt/RDFDatabank
+    Modify the file workers_available/worker_broker.conf - if databank root is not /var/lib/databank
         [program:worker_broker]
-        directory = /opt/RDFDatabank/message_workers/
-        command = /opt/RDFDatabank/message_workers/broker.py %(process_num)s
+        directory = /var/lib/databank/message_workers/
+        command = /var/lib/databank/message_workers/broker.py %(process_num)s
         stdout_logfile = /var/log/databank/broker.log
 
-    Modify the file workers_available/worker_solr.conf - if databank root is not /opt/RDFDatabank
+    Modify the file workers_available/worker_solr.conf - if databank root is not /var/lib/databank
         [program:worker_solr]
-        directory = /opt/RDFDatabank/message_workers/
-        command = /opt/RDFDatabank/message_workers/solr_worker.py %(process_num)s
+        directory = /var/lib/databank/message_workers/
+        command = /var/lib/databank/message_workers/solr_worker.py %(process_num)s
         stdout_logfile = /var/log/databank/solr_worker.log
 
     Stop supervisor, copy the following files to /etc/supervisor/conf.d/ and start supervisor
@@ -322,13 +327,13 @@ The workers that run on these message queues are managed using supervisor
 IX. Making sure all of the needed folders are available and apache has access to all the needed parts
 ------------------------------------------------------------------------------------------------------
 Apache runs as user www-data. Make sure the user www-data is able to read write to the following locations
-    /opt/RDFDatabank
+    $DB_ROOT
     /silos (create if not available)
     /var/log/databank (create if not available)
     
 Change permission, so www-data has access to RDFDatabank
-    sudo chown -R www-data:demoSystemUser /opt/RDFDatabank/
-    sudo chmod -R 775 /opt/RDFDatabank/
+    sudo chown -R www-data:demoSystemUser $DB_ROOT
+    sudo chmod -R 775 $DB_ROOT
 
 Create a folder called /silos and change it's owner and permission. This is where the silos are going to be stored
     sudo mkdir /silos
@@ -356,7 +361,7 @@ and restart apache so you can check the logs to see what's happening. The who.lo
 ------------------------------------------------------------------------------------------------------
 XI. Run the test code and make sure all the tests pass
 ------------------------------------------------------------------------------------------------------
-The test code is located at /opt/RDFDatabank/rdfdatabank/tests
+The test code is located at $DB_ROOT/rdfdatabank/tests
 
 There are two test files - TestSubmission.py and TestSubmission_submitter.py
     TestSubmission.py test all of the different functionality
@@ -376,7 +381,7 @@ Both of these tests use the configuration file RDFDatabankConfig.py, which you m
 
 To run the tests
     Make sure databank is running (see section IX)
-    cd /opt/RDFDatabank/rdfdatabank/tests
+    cd $DB_ROOT/rdfdatabank/tests
     python TestSubmission.py              (to run the tests in TestSubmission.py)
     python TestSubmission_submitter.py    (to run the tests in TestSubmission_submitter.py)
 
