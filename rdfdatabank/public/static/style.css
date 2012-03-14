@@ -462,3 +462,7 @@ span#itemsppt a.active:hover, span#itemsppb a.active:hover {
     background: #FFFF99;
 >>>>>>> upstream/master
 }
+
+.httperror h1{
+    font-size: 2em;
+}

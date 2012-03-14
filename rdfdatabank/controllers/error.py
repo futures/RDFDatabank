@@ -25,12 +25,13 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 import cgi
 
 from paste.urlparser import PkgResourcesParser
-from pylons import request
+from pylons import request, response, tmpl_context as c
 from pylons.controllers.util import forward
 from pylons.middleware import error_document_template
 from webhelpers.html.builder import literal
 
-from rdfdatabank.lib.base import BaseController
+from rdfdatabank.lib.base import BaseController, render
+from rdfdatabank.lib.conneg import MimeType as MT, parse as conneg_parse
 
 class ErrorController(BaseController):
 
@@ -48,11 +49,44 @@ class ErrorController(BaseController):
         """Render the error document"""
         resp = request.environ.get('pylons.original_response')
         content = literal(resp.body) or cgi.escape(request.GET.get('message', ''))
-        page = error_document_template % \
-            dict(prefix=request.environ.get('SCRIPT_NAME', ''),
-                 code=cgi.escape(request.GET.get('code', str(resp.status_int))),
-                 message=content)
-        return page
+        code = cgi.escape(request.GET.get('code', str(resp.status_int)))
+        if 'HTTP_ACCEPT' in request.environ:
+            try:
+                accept_list = conneg_parse(request.environ['HTTP_ACCEPT'])
+            except:
+                accept_list= [MT("text", "plain")]
+        if not accept_list:
+            accept_list= [MT("text", "plain")]
+        mimetype = accept_list.pop(0)
+        while(mimetype):
+            if str(mimetype).lower() in ["text/html", "text/xhtml"]:
+                #page = error_document_template % \
+                #dict(prefix=request.environ.get('SCRIPT_NAME', ''),
+                #    code=code,
+                #    message=content)
+                #return page
+                c.code = code
+                #c.message = content
+                c.message = cgi.escape(request.GET.get('message', ''))
+                c.status = resp.status
+                c.status = c.status.replace(c.code, '').strip()
+                if not c.message:
+                    c.message = content.replace(resp.status, '').strip()
+                return render('/error.html')
+            elif str(mimetype).lower() in ["text/plain", "application/json"]:
+                response.content_type = 'text/plain; charset="UTF-8"'
+                response.status_int = resp.status_int
+                response.status = resp.status
+                return content
+            try:
+                mimetype = accept_list.pop(0)
+            except IndexError:
+                mimetype = None
+        #Whoops nothing satisfies - return text/plain
+        response.content_type = 'text/plain; charset="UTF-8"'
+        response.status_int = resp.status_int
+        response.status = resp.status
+        return content
 
     def img(self, id):
         """Serve Pylons' stock images"""
