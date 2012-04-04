@@ -36,9 +36,9 @@ import json as simplejson
 from lib.HTTP_request import HTTPRequest
 
 #--CONFIG-------------------------------------------------------
-host = 'databank.ora.ox.ac.uk'
+host = 'databank-vm1.oerc.ox.ac.uk'
 user_name = 'admin'
-password = 'p3ng4a!'
+password = 'test'
 datastore = HTTPRequest(endpointhost=host)
 datastore.setRequestUserPass(endpointuser=user_name, endpointpass=password)
 
