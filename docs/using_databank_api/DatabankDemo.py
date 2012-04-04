@@ -3,7 +3,7 @@
 import urllib2
 import base64
 import urllib
-from multipartform import MultiPartForm
+from lib.multipartform import MultiPartForm
 
 #===============================================================================
 #Using urllib2 to create a package in Databank
@@ -31,7 +31,7 @@ ans.code
 #Add a file
 form = MultiPartForm()
 filename = "solrconfig.xml"
-filepath = "./solrconfig.xml"
+filepath = "data/unicode07.xml"
 form.add_file('file', filename, fileHandle=open(filepath))
 
 # Build the request

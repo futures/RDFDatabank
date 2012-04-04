@@ -1,7 +1,7 @@
 import urllib2
 import base64
 import urllib
-from multipart import MultiPartFormData
+from lib.multipart import MultiPartFormData
 import os
 
 #===============================================================================
@@ -30,7 +30,7 @@ ans.code
 #Add a file
 
 filename = "solrconfig.xml"
-filepath = "./solrconfig.xml"
+filepath = "data/unicode07.xml"
 f = open(filepath, 'rb')
 stat_info = os.stat(filepath)
 
