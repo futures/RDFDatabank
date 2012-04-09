@@ -168,7 +168,6 @@ def create_new(silo, id, creator, title=None, embargoed=None, embargoed_until=No
     item.metadata['uuid'] = uuid4().hex
     item.add_namespace('oxds', "http://vocab.ox.ac.uk/dataset/schema#")
     item.add_triple(item.uri, u"rdf:type", "oxds:DataSet")
-
     item.metadata['embargoed_until'] = ''
     item.del_triple(item.uri, u"oxds:isEmbargoed")
     item.del_triple(item.uri, u"oxds:embargoedUntil")
@@ -268,6 +267,8 @@ def munge_manifest(manifest_file, item):
                     pass
         for (s, p, o) in triples:
             item.add_triple(s, p, o)
+    manifest_file_name = os.path.basename(manifest_file)
+    item.manifest['versionlog'][item.currentversion].append('Updated file manifest.rdf')
     item.sync()
     if seeAlsoFiles:
         for fileuri in seeAlsoFiles:

@@ -205,7 +205,10 @@ class ItemsController(BaseController):
  
     @rest.restrict('GET', 'POST', 'PUT')
     def itemview(self, silo, id, path):
-        """API call to read the contents of a zip-file (without having to unpack) and unpack a zip file into a new / existing dataset"""
+        """API call to 
+           GET - read the contents of a zip-file (without having to unpack) and 
+           POST- unpack a zip file into a new / existing dataset
+           PUT - Add the zipfile and unpack it onto the existing dataset"""
         #tmpl_context variables needed: c.silo_name, c.zipfile_contents c.ident, c.id, c.path       
         if not path:
             abort(400, "You must supply a filename to unpack")
@@ -323,7 +326,7 @@ class ItemsController(BaseController):
             
             #step 2: Unpack zip item 
             try:
-                unpack_zip_item(target_dataset_name, dataset, path, rdfsilo, ident['repoze.who.userid'])
+                unpack_zip_item(target_dataset, dataset, path, rdfsilo, ident['repoze.who.userid'])
             except BadZipfile:
                 abort(400, "Couldn't unpack zipfile")
             
@@ -398,17 +401,18 @@ class ItemsController(BaseController):
             dataset.add_triple(dataset.uri, u"oxds:currentVersion", dataset.currentversion)
             dataset.sync()
 
+            target_dataset = rdfsilo.get_item(id)
             #step 2: Unpack zip item 
             if not check_file_mimetype(target_filepath, 'application/zip'): 
                 abort(415, "File is not of type application/zip")
             try:
-                unpack_zip_item(dataset, dataset, path, rdfsilo, ident['repoze.who.userid'])
+                unpack_zip_item(target_dataset, dataset, path, rdfsilo, ident['repoze.who.userid'])
             except BadZipfile:
                 abort(400, "Couldn't unpack zipfile")
 
-            dataset.sync()
-            dataset.sync()
-            dataset.sync()
+            target_dataset.sync()
+            target_dataset.sync()
+            target_dataset.sync()
             
             response.status = "204 Updated"
             response.status_int = 204
