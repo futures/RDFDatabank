@@ -24,13 +24,14 @@ Depends: python,
          python-solrpy,
          python-redis,
          unzip,
+         sword-server,
          apache2,
          apache2-utils,
          libapache2-mod-wsgi,
          redis-server,
          supervisor,
-         debconf,
-         openjdk-6-jre
+         openjdk-6-jre,
+         debconf
 Recommends: solr-tomcat
 Description: RDF-enhanced, pairtree-backed storage API
  Databank is a simple, RDF-enhanced storage API which is backed by pairtree,
