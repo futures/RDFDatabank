@@ -221,14 +221,17 @@ from rdflib import URIRef
   % endif
   <!-- aggregates  -->
   % if 'aggregates' in c.metadata:
-    <tr><th>Aggregates</th><td><div>
+    <tr class="aggregates"><th>Aggregates</th><td><div>
+    <ul>
+    
     % for v in c.metadata['aggregates']:
       % if isinstance(v, URIRef):
-        <a href="${v}">${v}</a><br/>
+        <li><a href="${v}">${v}</a></li>
       % else:
-        ${v}<br/>
+        <li>${v} type(v)</li>
       % endif
     % endfor
+    </ul>
     </div></td></tr>  
   % endif
   <!-- end -->

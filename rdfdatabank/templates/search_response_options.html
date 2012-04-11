@@ -74,8 +74,8 @@ ${h.link_to(pagcount, "%s&start=%d&rows=%d&sort=%s"%(c.add_facet, offset, c.rows
         titlestring = c.add_facet + "&sort=silo+desc&rows=%d&start=%d"%(c.rows, c.start)
 %>
 <a class="active" href="${relstring}">Relevance</a> | 
-<a href="${datestring}" title="Date descending">Date </a><img src="/static/styles/images/up_arrow_blue.png" height=10px alt="Descending"/> |
-<a href="${titlestring}" title="Silo descending">Silo </a><img src="/static/styles/images/up_arrow_blue.png" height=10px alt="Descending"/>
+<a href="${datestring}" title="Date descending">Date </a><img src="/static/styles/images/up_arrow_blue.png" height="10" alt="Descending"/> |
+<a href="${titlestring}" title="Silo descending">Silo </a><img src="/static/styles/images/up_arrow_blue.png" height="10" alt="Descending"/>
 
 %	elif (c.sort == "publicationDate desc"):
 <%
@@ -84,8 +84,8 @@ ${h.link_to(pagcount, "%s&start=%d&rows=%d&sort=%s"%(c.add_facet, offset, c.rows
 	titlestring = c.add_facet + "&sort=silo+desc&rows=%d&start=%d"%(c.rows, c.start)
 %>
 <a href="${relstring}">Relevance</a> |
-<a class="active" href="${datestring}" title="Date ascending">Date </a><img src="/static/styles/images/down_arrow_black.png" height=10px alt="Ascending"/> | 
-<a href="${titlestring}" title="Silo descending">Silo </a><img src="/static/styles/images/up_arrow_blue.png" height=10px alt="Descending"/>
+<a class="active" href="${datestring}" title="Date ascending">Date </a><img src="/static/styles/images/down_arrow_black.png" height="10" alt="Ascending"/> | 
+<a href="${titlestring}" title="Silo descending">Silo </a><img src="/static/styles/images/up_arrow_blue.png" height="10" alt="Descending"/>
 
 %	elif (c.sort == "publicationDate asc"):
 <%
@@ -94,8 +94,8 @@ ${h.link_to(pagcount, "%s&start=%d&rows=%d&sort=%s"%(c.add_facet, offset, c.rows
 	titlestring = c.add_facet + "&sort=silo+desc&rows=%d&start=%d"%(c.rows, c.start)
 %>
 <a href="${relstring}">Relevance</a> |
-<a class="active" href="${datestring}" title="Date descending">Date </a><img src="/static/styles/images/up_arrow_black.png" height=10px alt="Descending"/> |
-<a href="${titlestring}" title="Silo descending">Silo </a><img src="/static/styles/images/up_arrow_blue.png" height=10px alt="Descending"/>
+<a class="active" href="${datestring}" title="Date descending">Date </a><img src="/static/styles/images/up_arrow_black.png" height="10" alt="Descending"/> |
+<a href="${titlestring}" title="Silo descending">Silo </a><img src="/static/styles/images/up_arrow_blue.png" height="10" alt="Descending"/>
 
 %	elif (c.sort == "silo desc"):
 <%
@@ -104,8 +104,8 @@ ${h.link_to(pagcount, "%s&start=%d&rows=%d&sort=%s"%(c.add_facet, offset, c.rows
 	titlestring = c.add_facet + "&sort=silo+asc&rows=%d&start=%d"%(c.rows, c.start)
 %>
 <a href="${relstring}">Relevance</a> | 
-<a href="${datestring}" title="Date descending">Date </a><img src="/static/styles/images/up_arrow_blue.png" height=10px alt="Descending"/> |
-<a class="active" href="${titlestring}" title="Silo ascending">Silo </a><img src="/static/styles/images/down_arrow_black.png" height=10px alt="Ascending"/>
+<a href="${datestring}" title="Date descending">Date </a><img src="/static/styles/images/up_arrow_blue.png" height="10" alt="Descending"/> |
+<a class="active" href="${titlestring}" title="Silo ascending">Silo </a><img src="/static/styles/images/down_arrow_black.png" height="10" alt="Ascending"/>
 
 %	elif (c.sort == "silo asc"):
 <%
@@ -114,8 +114,8 @@ ${h.link_to(pagcount, "%s&start=%d&rows=%d&sort=%s"%(c.add_facet, offset, c.rows
 	titlestring = c.add_facet + "&sort=silo+desc&rows=%d&start=%d"%(c.rows, c.start)
 %>
 <a href="${relstring}">Relevance</a> |
-<a href="${datestring}" title="Date descending">Date </a><img src="/static/styles/images/up_arrow_blue.png" height=10px alt="Descending"/> |
-<a class="active" href="${titlestring}" title="Silo descending">Silo </a><img src="/static/styles/images/up_arrow_black.png" height=10px alt="Descending"/>
+<a href="${datestring}" title="Date descending">Date </a><img src="/static/styles/images/up_arrow_blue.png" height="10" alt="Descending"/> |
+<a class="active" href="${titlestring}" title="Silo descending">Silo </a><img src="/static/styles/images/up_arrow_black.png" height="10" alt="Descending"/>
 
 %	else:
 <%
@@ -124,8 +124,8 @@ ${h.link_to(pagcount, "%s&start=%d&rows=%d&sort=%s"%(c.add_facet, offset, c.rows
 	titlestring = c.add_facet + "&sort=silo+desc&rows=%d&start=%d"%(c.rows ,c.start)
 %>
 <a href="${relstring}">Relevance</a> |
-<a href="${datestring}" title="Date descending">Date </a><img src="/static/styles/images/up_arrow_blue.png" height=10px alt="Descecding"/> |
-<a href="${titlestring}" title="Silo descending">Silo </a><img src="/static/styles/images/up_arrow_blue.png" height=10px alt="Descecding"/>
+<a href="${datestring}" title="Date descending">Date </a><img src="/static/styles/images/up_arrow_blue.png" height="10" alt="Descecding"/> |
+<a href="${titlestring}" title="Silo descending">Silo </a><img src="/static/styles/images/up_arrow_blue.png" height="10" alt="Descecding"/>
 
 %	endif
 </span>
@@ -137,7 +137,7 @@ ${h.link_to(pagcount, "%s&start=%d&rows=%d&sort=%s"%(c.add_facet, offset, c.rows
 <%def name="numresultspp(idname)">
 % if c.docs and c.add_facet:
 <div class="searchright">
-<span id="${idname}">
+<div id="${idname}">
 <span>Items per page: </span>
 <%
 	twentyfstring = c.add_facet + "&rows=25&sort=%s"%c.sort
@@ -265,7 +265,7 @@ ${h.link_to(pagcount, "%s&start=%d&rows=%d&sort=%s"%(c.add_facet, offset, c.rows
 <input class="itemsppformtext itemsppformchosen" type="text" name="rows" value="${c.rows}" onUnfocus="this.form.submit()"/>
 </form>
 %	endif
-</span>
+</div>
 </div>
 % endif
 </%def>
@@ -273,7 +273,7 @@ ${h.link_to(pagcount, "%s&start=%d&rows=%d&sort=%s"%(c.add_facet, offset, c.rows
 <%def name="currentsearch()">
 ## Current search
 <div class="current_search">
-<div class="current_search_header">Current Search</div>
+<h2 class="current_search_header">Current Search</h2>
 
 ##----c.q----
 <div class="current_facet">

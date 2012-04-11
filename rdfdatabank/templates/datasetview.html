@@ -30,7 +30,7 @@ c.current = c.id
 
 % if c.editor:
   <div id="editor_view">
-  <p class="title">Editorial functions</p>
+  <h2>Edit options</h2>
   <!-- View Information -->
   <!--
   Change view : 
@@ -53,21 +53,26 @@ c.current = c.id
   % endif
   -->
   <!-- State Information -->
-  <p><b><a href="/${c.silo_name}/states/${c.id}">
-    <img src="/static/styles/images/state-icon-24.png"/>View state information</a></b></p>
-  <p><b><a href="#update_access" onclick="showhide('update_access');">
-    <img src="/static/styles/images/page-edit-icon-24.png"/>Update access policy</a></b></p>
-  <p><b><a href="#add_metadata" onclick="showhide('add_metadata');">
-    <img src="/static/styles/images/file-add-icon-24.png"/>Add metadata</a></b></p>
-  <p><b><a href="#upload_file" onclick="showhide('upload_file');">
-    <img src="/static/styles/images/file-new-icon-24.png"/>Upload file</a></b></p>
-  <!-- <p><b><a href="#delete_dataset" onclick="showhide('delete_dataset');">
-    <img src="/static/styles/images/delete-icon-24.png"/>Delete dataset</a></b></p> -->
-  <p><b><a class="delete" href="/${c.silo_name}/datasets/${c.id}" data-remove="${"_".join(c.silo_name.split("."))}_${"_".join(c.id.split(":"))}">
-    <img src="/static/styles/images/delete-icon-24.png"/>Delete dataset</a></b></p>
+  <ul class="stateInfo">
+  <li><a href="/${c.silo_name}/states/${c.id}">
+    <img src="/static/styles/images/state-icon-24.png"/>View state information</a></li>
+  <li><a href="#update_access" onclick="showhide('update_access');">
+    <img src="/static/styles/images/page-edit-icon-24.png"/>Update access policy</a></li>
+  <li><a href="#add_metadata" onclick="showhide('add_metadata');">
+    <img src="/static/styles/images/file-add-icon-24.png"/>Add metadata</a></li>
+  <li><a href="#upload_file" onclick="showhide('upload_file');">
+    <img src="/static/styles/images/file-new-icon-24.png"/>Upload file</a></li>
+  <!-- <li><a href="#delete_dataset" onclick="showhide('delete_dataset');">
+    <img src="/static/styles/images/delete-icon-24.png"/>Delete dataset</a></li> -->
+  <li><a class="delete" href="/${c.silo_name}/datasets/${c.id}" data-remove="${"_".join(c.silo_name.split("."))}_${"_".join(c.id.split(":"))}">
+    <img src="/static/styles/images/delete-icon-24.png"/>Delete dataset</a></li>
   % if c.zipfiles:
-  <p><b><a href="#unpack_endpoints" onclick="showhide('unpack_endpoints');">
-    <img src="/static/styles/images/unzip-icon-32.png"/>Unpack zip files</a></b></p>
+  <li><a href="#unpack_endpoints" onclick="showhide('unpack_endpoints');">
+    <img src="/static/styles/images/unzip-icon-32.png"/>Unpack zip files</a></li>
+    
+    </ul>
+    
+    
   % endif
   </div>
 % endif
@@ -103,7 +108,7 @@ c.current = c.id
 
 <!-- Embargo Information -->
 % if c.embargos:
-<h2>Access Information</b></h2>
+<h2>Access Information</h2>
 <div class="dataset_info">
 % if c.embargos and c.current in c.embargos and c.embargos[c.current]:
  <% c.emb = c.embargos[c.current] %>

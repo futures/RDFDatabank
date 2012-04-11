@@ -2,10 +2,10 @@
 <div id="search">
 <form method="GET" enctype="multipart/form-data" action="/search/detailed" accept-charset="UTF-8">
 <label for="q">Search</label>
-% if c.q:
+% if c.q and c.q != "*:*":
 <input id="q" type="text" name="q" value="${c.q}"/>
 % else:
-<input id="q" type="text" name="q" placeholder="search datasets"/>
+<input id="q" type="text" name="q" placeholder="search data packages"/>
 % endif
 <input type="submit" value="Search"/><br/>
 % if c.typ:
