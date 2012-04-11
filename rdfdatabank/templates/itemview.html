@@ -26,7 +26,7 @@
 <!-- View Information -->
 % if c.editor:
   <div id="editor_view">
-  <p class="title">Editorial functions</p>
+  <h2>Edit options</h2>
   <!-- 
   % if c.view == 'editor':
     Editor view 
@@ -43,8 +43,10 @@
     <a href="/${c.silo_name}/datasets/${c.id}/${c.path}?view=user">User</a></p>
   % endif
   -->
-  <p><b><a href="#upload_file" onclick="showhide('upload_file');">
-    <img src="/static/styles/images/file-new-icon-24.png"/>Upload file</a></b></p>
+  <ul class="stateInfo">
+  <li><a href="#upload_file" onclick="showhide('upload_file');">
+    <img src="/static/styles/images/file-new-icon-24.png"/>Upload file</a></li>
+  </ul>
   </div>
 % endif
 
@@ -61,7 +63,7 @@
 % endif
 
 % if c.versions:
-  <h3>View other versions:</h3><ul>
+  <h3>View other versions:</h3><ul class="versions">
   % for v in c.versions:
     % if c.version and v == c.version:
       <li><a class="current" href="/${c.silo_name}/datasets/${c.id}/${c.path}?version=${v}">${v}</a></li>
