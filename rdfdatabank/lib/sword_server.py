@@ -196,6 +196,8 @@ class SwordDataBank(SwordServer):
         # FIXME: need to sort out authentication before we can do this ...
         # FIXME: also, it's not relevant unless we take a binary-only deposit, which
         # we currently don't
+        # User already authorized to deposit in this silo (_get_authorised_rdf_silo). 
+        # This is to augment metadata with details like who created, on behalf of, when
         #
         #by = deposit.auth.username if deposit.auth is not None else None
         #obo = deposit.auth.on_behalf_of if deposit.auth is not None else None
@@ -210,11 +212,13 @@ class SwordDataBank(SwordServer):
         rdf_string = f.read()
 
         # create the new manifest and store it
+        #Serialize rdf adds the sword statement - state, depositedOn, by, onBehalfOf, stateDesc
         new_manifest = s.serialise_rdf(rdf_string)
         item.put_stream("manifest.rdf", new_manifest)
 
         # FIXME: here is where we have to put the correct treatment in
         # now generate a receipt for the deposit
+        # TODO: Add audit log from item.manifest in place of  "created new item"
         receipt = self.deposit_receipt(silo, deposit.slug, item, "created new item")
 
         # FIXME: while we don't have full text deposit, we don't need to augment
@@ -284,13 +288,17 @@ class SwordDataBank(SwordServer):
             # remove all the old files before adding the new.  We always leave
             # behind the metadata; this will be overwritten later if necessary
             #self.dao.remove_content(collection, id, True, keep_atom)
-            dataset.increment_version_delta(clone_previous_version=True, copy_filenames=['manifest.rdf'])
+            #Increment the version, but do not clone the previous version.
+            # An update will replace the entire contents of the container (if previously unpacked) with the bagit file
+            dataset.increment_version_delta(clone_previous_version=False, copy_filenames=['manifest.rdf'])
 
             # store the content file
             dataset.put_stream(deposit.filename, deposit.content)
             ssslog.debug("New incoming file stored with filename " + deposit.filename)
             
             # FIXME: unpacking doesn't happen here ... (keeping for the time being for reference)
+            # Broadcast to unpack and add sword:state in manifest
+            # <sword:state rdf:resource="http://purl.org/net/sword/state/queuedForUnpacking"/>
             
             # now that we have stored the atom and the content, we can invoke a package ingester over the top to extract
             # all the metadata and any files we want.  Notice that we pass in the metadata_relevant flag, so the
@@ -337,8 +345,7 @@ class SwordDataBank(SwordServer):
                     ssslog.debug("Removing state: " + state_uri)
                     # we do not want the state if it is a content state and we have been given
                     # a new content state
-                    keep = False
-            
+                    keep = False            
             if keep:
                 ssslog.debug("carrying over state: " + state_uri)
                 new_states.append((state_uri, state_desc))
@@ -358,7 +365,8 @@ class SwordDataBank(SwordServer):
         # NOTE AR: I have commented the following lines. 
         #       For aggregates this is not needed. put_stream will add the aggregate into the URI. 
         #       Why delete other triples in the manifest - ??
-        """
+        # sword:originalDeposit point to isVersionOf
+        
         aggregates = dataset.list_rdf_objects(dataset.uri, u"ore:aggregates")
         original_deposits = dataset.list_rdf_objects(dataset.uri, u"sword:originalDeposit")
         states = dataset.list_rdf_objects(dataset.uri, u"sword:state")
@@ -372,13 +380,12 @@ class SwordDataBank(SwordServer):
         dataset.del_triple(dataset.uri, u"ore:aggregates")
         dataset.del_triple(dataset.uri, u"sword:originalDeposit")
         dataset.del_triple(dataset.uri, u"sword:state")
-        """
 
         # FIXME: also unsafe in the same way as above
         # Write the md5 checksum into the manifest
-        # NOTE AR: Even if doing this, why delete all MD5 triples. Delete just for the deposit_uri
-        #dataset.del_triple("*", u"oxds:hasMD5")
-        dataset.del_triple(deposit_uri, u"oxds:hasMD5")
+        # A deposit contains just the new stuff so no harm in deleting all triples 
+        dataset.del_triple("*", u"oxds:hasMD5")
+        #dataset.del_triple(deposit_uri, u"oxds:hasMD5")
         if deposit.content_md5 is not None:
             dataset.add_triple(deposit_uri, u"oxds:hasMD5", deposit.content_md5)
         
@@ -420,7 +427,8 @@ class SwordDataBank(SwordServer):
         dataset.put_stream("manifest.rdf", new_manifest)
         
         # FIXME: add in proper treatment here
-        # now generate a receipt
+        # now generate a receipt. 
+        # TODO: Include audit log instead of 'added zip to dataset'
         receipt = self.deposit_receipt(silo, dataset_id, dataset, "added zip to dataset")
         
         # now augment the receipt with the details of this particular deposit
@@ -465,7 +473,6 @@ class SwordDataBank(SwordServer):
         # any checking, we just get on with it
 
         ssslog.info("Container requested in mime format: " + accept_parameters.content_type.mimetype())
-
         silo, dataset_id, _ = self.um.interpret_path(path)
         rdf_silo = self._get_authorised_rdf_silo(silo)
         
@@ -474,6 +481,7 @@ class SwordDataBank(SwordServer):
 
         # pick either the deposit receipt or the pure statement to return to the client
         if accept_parameters.content_type.mimetype() == "application/atom+xml;type=entry":
+            # Supply audit log as treatment, in place of 'no treatment'
             receipt = self.deposit_receipt(silo, dataset_id, dataset, "no treatment") # FIXME: what should the treatment here be
             return receipt.serialise()
         # FIXME: at the moment we don't support conneg on the edit uri
@@ -590,9 +598,6 @@ class SwordDataBank(SwordServer):
             dc_metadata["creator"] = ["SWORD Client"]
         if not dc_metadata.has_key("abstract"):
             dc_metadata["abstract"] = ["Content deposited with SWORD client"]
-
-        #FIXME AR- The audit log for the package is avaiable as a dictionary at item.manifest['versionlog'].
-        #Where shpould this be added
 
         packaging = []
         for disseminator in self.config.sword_disseminate_package:
