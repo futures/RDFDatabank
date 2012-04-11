@@ -83,6 +83,13 @@ def make_map():
     
     map.connect('/{silo}/doi/{id}', controller='doi', action='datasetview')
 
+    # SWORDv2 Configuration
+    map.connect('/swordv2/service-document', controller="sword", action="service_document") # From which to retrieve the service document
+    map.connect('/swordv2/silo/{path:.*?}', controller="sword", action="collection") # Representing a Collection as listed in the service document
+    map.connect('/swordv2/edit-media/{path:.*?}', controller="sword", action="media_resource") # The URI used in atom:link@rel=edit-media
+    map.connect('/swordv2/edit/{path:.*?}', controller="sword", action="container") # The URI used in atom:link@rel=edit
+    map.connect('/swordv2/statement/{path:.*?}', controller="sword", action="statement") # The URI used in atom:link@rel=sword:statement
+
     map.connect('/{controller}')
     map.connect('/{controller}/{action}')
     map.connect('/{controller}/{action}/{id}')
