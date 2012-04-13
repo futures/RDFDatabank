@@ -396,7 +396,7 @@ class AdminController(BaseController):
         #c.granary_list = ag.granary.silos
         c.silo_name = silo_name
         # Admin only
-        if not ident.get('role') in ["admin", "manager"]:
+        if not user_role(ident) in ["admin", "manager"]:
             abort(403, "Do not have admin credentials")
         if not ag.granary.issilo(silo_name):
             abort(404)
