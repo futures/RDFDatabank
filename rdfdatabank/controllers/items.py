@@ -31,7 +31,7 @@ from pylons.controllers.util import abort, redirect
 from pylons.decorators import rest
 
 from rdfdatabank.lib.base import BaseController, render
-from rdfdatabank.lib.utils import create_new, allowable_id2
+from rdfdatabank.lib.utils import create_new, allowable_id2, user_role
 from rdfdatabank.lib.file_unpack import check_file_mimetype, BadZipfile, get_zipfiles_in_dataset, unpack_zip_item, read_zipfile
 from rdfdatabank.lib.conneg import MimeType as MT, parse as conneg_parse
 
@@ -76,12 +76,12 @@ class ItemsController(BaseController):
                 silos = ag.authz(granary_list, ident)
                 if silo not in silos:
                     abort(403, "Forbidden")
-                if ident['repoze.who.userid'] == creator or ident.get('role') in ["admin", "manager"]:
+                if ident['repoze.who.userid'] == creator or user_role(ident) in ["admin", "manager"]:
                     c.editor = True
             elif ident:
                 silos = ag.authz(granary_list, ident)
                 if silo in silos:
-                    if ident['repoze.who.userid'] == creator or ident.get('role') in ["admin", "manager"]:
+                    if ident['repoze.who.userid'] == creator or user_role(ident) in ["admin", "manager"]:
                         c.editor = True
         else:
             #identity management of item 
@@ -90,7 +90,7 @@ class ItemsController(BaseController):
             silos = ag.authz(granary_list, ident)      
             if silo not in silos:
                 abort(403, "Forbidden")
-            if not (ident['repoze.who.userid'] == creator or ident.get('role') in ["admin", "manager"]):
+            if not (ident['repoze.who.userid'] == creator or user_role(ident) in ["admin", "manager"]):
                 abort(403, "Forbidden")
 
         if http_method == "GET":
@@ -249,7 +249,7 @@ class ItemsController(BaseController):
             silos = ag.authz(granary_list, ident)
             if silo not in silos:
                 abort(403, "Forbidden")     
-            if not (ident['repoze.who.userid'] == creator or ident.get('role') in ["admin", "manager"]):
+            if not (ident['repoze.who.userid'] == creator or user_role(ident) in ["admin", "manager"]):
                 abort(403, "Forbidden")
 
         item_real_filepath = dataset.to_dirpath()

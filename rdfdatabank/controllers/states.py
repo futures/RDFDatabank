@@ -30,7 +30,7 @@ from pylons.controllers.util import abort
 from pylons.decorators import rest
 
 from rdfdatabank.lib.base import BaseController
-from rdfdatabank.lib.utils import is_embargoed, serialisable_stat
+from rdfdatabank.lib.utils import is_embargoed, serialisable_stat, user_role
 
 log = logging.getLogger(__name__)
 
@@ -59,7 +59,7 @@ The state information for a silo contains the following:
         ident = request.environ.get('repoze.who.identity')
         if not ident:
             abort(401, "Not Authorised")
-        if not ident.get('role') in ["admin", "manager"]:
+        if not user_role(ident) in ["admin", "manager"]:
             abort(403, "Forbidden. You should be an administrator or manager to view this information")
         granary_list = ag.granary.silos
         silos = ag.authz(granary_list, ident)
@@ -109,7 +109,7 @@ The state information for a silo contains the following:
         if item.manifest and item.manifest.state and 'metadata' in item.manifest.state and item.manifest.state['metadata'] and \
             'createdby' in item.manifest.state['metadata'] and item.manifest.state['metadata']['createdby']:
             creator = item.manifest.state['metadata']['createdby']
-        if not (ident['repoze.who.userid'] == creator or ident.get('role') in ["admin", "manager"]):
+        if not (ident['repoze.who.userid'] == creator or user_role(ident) in ["admin", "manager"]):
             abort(403, "Forbidden. You should be the creator or manager or administrator to view this information")
 
                     

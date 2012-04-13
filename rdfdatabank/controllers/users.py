@@ -31,6 +31,7 @@ from pylons.decorators import rest
 from pylons import app_globals as ag
 from rdfdatabank.lib.base import BaseController, render
 from rdfdatabank.lib.conneg import MimeType as MT, parse as conneg_parse
+from rdfdatabank.lib.utils import user_role
 #from rdfdatabank.config import users
 
 log = logging.getLogger(__name__)
@@ -50,10 +51,10 @@ class UsersController(BaseController):
             abort(404)
 
         # Admin only
-        if not ident.get('role') in ["admin", "manager"]:
+        if not user_role(ident) in ["admin", "manager"]:
             abort(403, "User does not have admin credentials")
       
-        if ident.get('role') == "admin":
+        if user_role(ident) == "admin":
             c.roles = ["admin", "manager", "user"]
         else:
             c.roles = ["manager", "user"]
@@ -76,7 +77,7 @@ class UsersController(BaseController):
                 if not u in ag.users:
                     c.users.remove(u)
                     continue
-                if ag.users[u]['role'] == "admin" and ident.get('role') == "manager":
+                if ag.users[u]['role'] == "admin" and user_role(ident) == "manager":
                     c.users.remove(u)
             accept_list = None
             if 'HTTP_ACCEPT' in request.environ:
@@ -195,9 +196,9 @@ class UsersController(BaseController):
             abort(404)
 
         # Admin only
-        if not ident.get('role') in ["admin", "manager"]:
+        if not user_role(ident) in ["admin", "manager"]:
             abort(403, "User does not have admin credentials")
-        if ident.get('role') == "admin":
+        if user_role(ident) == "admin":
             c.roles = ["admin", "manager", "user"]
         else:
             c.roles = ["manager", "user"]
@@ -212,7 +213,7 @@ class UsersController(BaseController):
         if http_method == "GET":
             if not username in ag.users:
                 abort(404)
-            #if ag.users[username]['role'] == "admin" and ident.get('role') == "manager":
+            #if ag.users[username]['role'] == "admin" and user_role(ident) == "manager":
             #    abort(403)
             c.user =  ag.users[username]
             accept_list = None
@@ -249,7 +250,7 @@ class UsersController(BaseController):
                     existing_owners_of_silo = [x.strip() for x in kw['owners'].split(",") if x]
                 if not username in existing_owners_of_silo:
                     abort(403, "User not a part of the silo")
-                if ag.users[username]['role'] == "admin" and ident.get('role') == "manager":
+                if ag.users[username]['role'] == "admin" and user_role(ident) == "manager":
                     abort(403, "Manager cannot update admin user")
                 code = 204
             else:

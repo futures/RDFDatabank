@@ -30,6 +30,7 @@ from pylons.decorators import rest
 from pylons import app_globals as ag
 from rdfdatabank.lib.base import BaseController, render
 from rdfdatabank.lib.conneg import MimeType as MT, parse as conneg_parse
+from rdfdatabank.lib.utils import user_role
 import codecs
 from rdfdatabank.config import users
 
@@ -47,7 +48,7 @@ class AdminController(BaseController):
         c.ident = ident
         granary_list = ag.granary.silos
         c.granary_list = ag.authz(granary_list, ident)
-        if not ident.get('role') == "admin":
+        if not user_role(ident) == "admin":
             abort(403, "Do not have admin credentials")
 
         # Admin only
@@ -163,9 +164,9 @@ class AdminController(BaseController):
         #c.granary_list = ag.granary.silos
         c.silo_name = silo_name
         # Admin only
-        if not ident.get('role') in ["admin", "manager"]:
+        if not user_role(ident) in ["admin", "manager"]:
             abort(403, "Do not have admin credentials")
-        if ident.get('role') == "admin":
+        if user_role(ident) == "admin":
             c.roles = ["admin", "manager", "user"]
         else:
             c.roles = ["manager", "user"]
@@ -395,7 +396,7 @@ class AdminController(BaseController):
         #c.granary_list = ag.granary.silos
         c.silo_name = silo_name
         # Admin only
-        if not ident.get('role') == "admin":
+        if not user_role(ident) == "admin":
             abort(403, "Do not have admin credentials")
         if not ag.granary.issilo(silo_name):
             abort(404)

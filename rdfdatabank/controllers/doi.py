@@ -32,8 +32,8 @@ from rdfdatabank.lib.base import BaseController, render
 from rdfdatabank.lib.conneg import MimeType as MT, parse as conneg_parse
 from rdfdatabank.lib.HTTP_request import HTTPRequest
 from rdfdatabank.lib import short_pid
+from rdfdatabank.lib.utils import user_role
 from rdfdatabank.lib.doi_helper import get_doi_metadata, doi_count
-
 from rdfdatabank.config.doi_config import OxDataciteDoi
 
 class DoiController(BaseController):
@@ -90,7 +90,7 @@ class DoiController(BaseController):
             silos = ag.authz(granary_list, ident)      
             if silo not in silos:
                 abort(403, "Forbidden")
-            if not (ident['repoze.who.userid'] == creator or ident.get('role') in ["admin", "manager"]):
+            if not (ident['repoze.who.userid'] == creator or user_role(ident) in ["admin", "manager"]):
                 abort(403, "Forbidden")
         elif http_method == "GET":
             if ident['repoze.who.userid'] == creator or ident.get('role') in ["admin", "manager"]:

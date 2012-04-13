@@ -42,6 +42,15 @@ from collections import defaultdict
 
 ID_PATTERN = re.compile(r"^[0-9A-z\-\:]+$")
 
+def user_role(ident):
+    uid = ident['repoze.who.userid']
+    if uid in ag.users and 'role' in ag.users[uid] and ag.users[uid]['role']:
+        return ag.users[uid]['role']
+    elif 'role' in ident and ident['role']:
+        return ag.users[uid]['role']
+    else:
+        return ""
+
 def authz(granary_list,ident):
     g = ag.granary
     g.state.revert()
@@ -54,7 +63,7 @@ def authz(granary_list,ident):
             return owners
         else:
             return []
-    if 'role' in ident and ident['role'] == "admin":
+    if user_role(ident) == "admin":
         authd = []
         silos_owned = ident['owner']
         if not type(silos_owned).__name__ == 'list':
