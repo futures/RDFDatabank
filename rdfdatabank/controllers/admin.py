@@ -395,7 +395,7 @@ class AdminController(BaseController):
         #c.granary_list = ag.granary.silos
         c.silo_name = silo_name
         # Admin only
-        if not ident.get('role') == "admin":
+        if not ident.get('role') in ["admin", "manager"]:
             abort(403, "Do not have admin credentials")
         if not ag.granary.issilo(silo_name):
             abort(404)
@@ -416,6 +416,10 @@ class AdminController(BaseController):
             code = 204
         else:
             code = 201
+
+        if 'role' in params and params['role'] == 'admin' and not ident.get('role') == "admin":
+               abort(403, "Do not have admin credentials to add user as admin")
+
         owner_of_silos = []
         if code == 201:            
             if 'owner' in params and params['owner'] and (('first_name' in params and 'last_name' in params) or 'name' in params) and \
