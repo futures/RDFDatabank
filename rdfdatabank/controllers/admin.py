@@ -31,6 +31,7 @@ from pylons import app_globals as ag
 from rdfdatabank.lib.base import BaseController, render
 from rdfdatabank.lib.conneg import MimeType as MT, parse as conneg_parse
 import codecs
+from rdfdatabank.config import users
 
 log = logging.getLogger(__name__)
 
@@ -116,6 +117,7 @@ class AdminController(BaseController):
                     f = codecs.open(ag.userfile, 'w', 'utf-8')
                     f.write('# -*- coding: utf-8 -*-\n_USERS = %s'%str(ag.users))
                     f.close()
+                    reload(users)
  
                 # conneg return
                 accept_list = None
@@ -232,6 +234,7 @@ class AdminController(BaseController):
                     f = codecs.open(ag.userfile, 'w', 'utf-8')
                     f.write('# -*- coding: utf-8 -*-\n_USERS = %s'%str(ag.users))
                     f.close()
+                    reload(users)
 
                 # conneg return
                 accept_list = None
@@ -301,6 +304,7 @@ class AdminController(BaseController):
                     f = codecs.open(ag.userfile, 'w', 'utf-8')
                     f.write('# -*- coding: utf-8 -*-\n_USERS = %s'%str(ag.users))
                     f.close()
+                    reload(users)
                  
                 # conneg return
                 accept_list = None
@@ -455,7 +459,7 @@ class AdminController(BaseController):
         f = codecs.open(ag.userfile, 'w', 'utf-8')
         f.write('# -*- coding: utf-8 -*-\n_USERS = %s'%str(ag.users))
         f.close()
-        #reload(users)
+        reload(users)
         #silos_to_be_added = ag.users[params['username']]['owner']
         #Add owner to silos
         if owner_of_silos:

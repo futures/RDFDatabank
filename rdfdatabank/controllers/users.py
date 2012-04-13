@@ -137,7 +137,7 @@ class UsersController(BaseController):
             f = codecs.open(ag.userfile, 'w', 'utf-8')
             f.write('# -*- coding: utf-8 -*-\n_USERS = %s'%str(ag.users))
             f.close()
-            #reload(users)
+            reload(users)
             #silos_to_be_added = ag.users[params['username']]['owner']
             #Add owner to silos
             if owner_of_silos:
@@ -302,7 +302,7 @@ class UsersController(BaseController):
             f = codecs.open(ag.userfile, 'w', 'utf-8')
             f.write('# -*- coding: utf-8 -*-\n_USERS = %s'%str(ag.users))
             f.close()
-            #reload(users)
+            reload(users)
             #silos_to_be_added = ag.users[params['username']]['owner']
             #Add owner to silos
             if owner_of_silos:
