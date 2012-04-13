@@ -93,8 +93,11 @@ media="(min-width: 1100px) and (max-width: 1600px)"/>
      
       <%
         user_logged_in = request.environ.get("repoze.who.identity")
+        showAdmin = False
         if user_logged_in:
             c.user_logged_in_name = user_logged_in['repoze.who.userid']
+            if 'role' in user_logged_in and user_logged_in['role'] == "admin":
+                showAdmin = True
         current_url = request.environ.get('PATH_INFO')
       %> 
       
@@ -112,7 +115,7 @@ media="(min-width: 1100px) and (max-width: 1600px)"/>
 	<li><a href="/about" >about</a></li>
 
 
-	% if c.ident and 'role' in c.ident and c.ident['role'] == "admin":
+	% if showAdmin:
 	<li><a href="/admin">admin</a></li>
 	% endif
 
