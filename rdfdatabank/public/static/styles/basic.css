@@ -36,7 +36,7 @@ h1, h2, h3, h4, h5, h6
 	color: #425e77;
 	font-weight: normal;
 	margin: 0.8em 0px 0.2em 0px;
-	text-transform: uppercase;
+	
 	
 }
 
@@ -128,6 +128,26 @@ p
 }
 
 
+
+/* START OF additional style changes applicable to both 'Bank and 'Stage, April 2012   */
+
+blockquote {
+  font-size: 1em;
+}
+
+code
+{
+  font-size: 1.3em;
+}
+
+.siteAdmin {
+
+}
+
+
+/* END OF additional style changes applicable to both 'Bank and 'Stage, April 2012   */
+
+
 /*  hide h2's in mainnav */
 #mainnav h2,
 #subnav h2
@@ -163,8 +183,12 @@ header.pageHeader h1
 	font-size: 5.5555em;
 	font-weight: bold;
 	letter-spacing: -0.16em;
+	/*
 	margin: -10px 0px -10px -7px;
+	*/
+	margin: 0px;
 	padding: 0px;
+	text-transform: uppercase;
 
 }
 
@@ -532,7 +556,7 @@ nav  {
 	border: 1px solid #dfe2e4;
 	border-top-style: none;
 	padding-bottom: 7px;
-        min-height: 55px;
+    position: relative;    
 }
 
 nav label.nonVis
@@ -614,8 +638,8 @@ padding-top: 7px;
 
 .nav_rt {
     position: absolute;
-    right: 20px;
-    top: 65px;
+    right: 5px;
+    top: 5px;
     color: #000;
     text-align: right;
 }
@@ -643,7 +667,8 @@ color: #fff;
 .intro,
 .pleaseNote,
 .message, 
-.about {
+.about,
+.siteAdmin{
   background: #fdfefe; /* for non-css3 browsers */
 		filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#fdfefe', endColorstr='#f4f7fa'); /* for IE */
 		background: -webkit-gradient(linear, left top, left bottom, from(#fdfefe), to(#f4f7fa)); /* for webkit browsers */
