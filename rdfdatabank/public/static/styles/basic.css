@@ -668,7 +668,7 @@ color: #fff;
 .pleaseNote,
 .message, 
 .about,
-.siteAdmin{
+{
   background: #fdfefe; /* for non-css3 browsers */
 		filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#fdfefe', endColorstr='#f4f7fa'); /* for IE */
 		background: -webkit-gradient(linear, left top, left bottom, from(#fdfefe), to(#f4f7fa)); /* for webkit browsers */
