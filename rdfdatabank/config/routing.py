@@ -60,13 +60,14 @@ def make_map():
     map.connect('/searching', controller='searching', action='index')
 
     map.connect('/admin', controller='admin', action='index')
+    map.connect('/users', controller='users', action='index')
+    map.connect('/users/{username}', controller='users', action='userview')
+    map.connect('/{silo}/users', controller='users', action='siloview')
+    map.connect('/{silo}/users/{username}', controller='users', action='silouserview')
+    map.connect('/{silo}/admin', controller='admin', action='siloview')
+    
     map.connect('/silos', controller='silos', action='index')
     map.connect('/{silo}', controller='silos', action='siloview')
-
-    map.connect('/{silo_name}/admin', controller='admin', action='archive')
-    map.connect('/{silo_name}/register', controller='admin', action='register')
-    map.connect('/{silo_name}/users', controller='users', action='index')
-    map.connect('/{silo_name}/users/{username}', controller='users', action='userview')
 
     map.connect('/{silo}/datasets', controller='datasets', action='siloview')
     map.connect('/{silo}/datasets/{id}', controller='datasets', action='datasetview')

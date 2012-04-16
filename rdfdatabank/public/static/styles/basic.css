@@ -697,6 +697,8 @@ line-height: 2em;
  
  	font-size: 2em;
  	text-align: center;
+	margin-bottom: 25px;
+	margin-top: 20px;
 }
 
 a:link.callToAction,
@@ -1043,6 +1045,15 @@ div#link_to_this_search a {
         color: #002147;
 }
 
+.nomatches {
+    background-color: rgba(255, 255, 255, 0.7);
+    color: #000000;
+    font-size: 1.2em;
+    margin: 30px 10px 10px 10px;
+    padding: 15px;
+    width: 100%;
+}
+
 .searchbottom {
         margin-bottom: 5px;
         margin-top: 10px;
@@ -1286,6 +1297,7 @@ font-size: 1.3em;
 }
 
 .edit_section {
+   clear: both;
    margin: 20px;
    padding: 10px 20px;
    border: 2px outset #333;
@@ -1329,6 +1341,14 @@ font-size: 1.3em;
     overflow: auto;*/
 }
 
+div.metadata {
+    margin-bottom: 10px;
+    line-height: 1.5em;
+}
+
+div.metadata label {
+}
+
 pre {
     white-space: pre-wrap; /* css-3 */
     white-space: -moz-pre-wrap !important; /* Mozilla, since 1999 */
@@ -1367,4 +1387,13 @@ pre {
     margin-top: 0px;
 }
 
+/* Admin section */
+.admin_list h4 {
+    display:inline;
+    margin-right: 5px;
+}
+
+.admin_list a {
+    margin-right: 10px;
+}
 

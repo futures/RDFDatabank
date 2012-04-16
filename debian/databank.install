@@ -12,3 +12,4 @@ test.ini /var/lib/databank/
 who.ini /var/lib/databank/
 sss.conf.json /var/lib/databank/
 add_user.py /var/lib/databank/
+persisted_state.json /var/lib/databank/

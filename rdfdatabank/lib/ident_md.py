@@ -21,15 +21,13 @@ CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
 TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
+
 from rdfdatabank.config.users import _USERS as _DATA
-#from rdfdatabank.config import users
 
 class IdentMDProvider(object):
 
     def add_metadata(self, environ, identity):
-        #reload(users)
         userid = identity.get('repoze.who.userid')
         info = _DATA.get(userid)
-        #info = users._Users.get(userid)
         if info is not None:
             identity.update(info)

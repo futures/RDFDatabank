@@ -40,65 +40,33 @@ from uuid import uuid4
 import re
 from collections import defaultdict
 
+from rdfdatabank.lib.auth_entry import list_silos
+
 ID_PATTERN = re.compile(r"^[0-9A-z\-\:]+$")
 
-def user_role(ident):
-    uid = ident['repoze.who.userid']
-    if uid in ag.users and 'role' in ag.users[uid] and ag.users[uid]['role']:
-        return ag.users[uid]['role']
-    elif 'role' in ident and ident['role']:
-        return ag.users[uid]['role']
-    else:
-        return ""
+def authz(granary_list, ident, permission=None):
+    #NOTE: g._register_silos() IS AN EXPENSIVE OPERATION. LISTING SILOS FROM DATABASE INSTEAD
+    #g = ag.granary
+    #g.state.revert()
+    #g._register_silos()
+    #granary_list = g.silos
+    granary_list = list_silos()
 
-def authz(granary_list,ident):
-    g = ag.granary
-    g.state.revert()
-    g._register_silos()
-    granary_list = g.silos
-    def _parse_owners(silo_name):
-        kw = g.describe_silo(silo_name)
-        if "owners" in kw.keys():
-            owners = [x.strip() for x in kw['owners'].split(",") if x]
-            return owners
-        else:
-            return []
-    if user_role(ident) == "admin":
-        authd = []
-        silos_owned = ident['owner']
-        if not type(silos_owned).__name__ == 'list':
-            silos_owned = [silos_owned]
-        if '*' in silos_owned:
-            #User has access to all silos
+    if permission and not type(permission).__name__ == 'list':
+        permission = [permission]
+
+    silos = []
+    for i in ident['user'].groups:
+        if i.silo == '*':
             return granary_list
-        for item in granary_list:
-            if item in silos_owned:
-                authd.append(item)
+        if i.silo in granary_list and not i.silo in silos:
+            if not permission:
+                silos.append(i.silo)
             else:
-                owners = _parse_owners(item)
-                if '*' in owners:
-                    #All users have access to the silo
-                    authd.append(item)
-                if ident['repoze.who.userid'] in owners:
-                    authd.append(item)
-        return authd
-    elif 'owner' in ident:
-        authd = []
-        silos_owned = ident['owner']
-        if not type(silos_owned).__name__ == 'list':
-            silos_owned = [silos_owned]
-        for item in granary_list:
-            if item in silos_owned:
-                authd.append(item)
-            else:
-                owners = _parse_owners(item)
-                if ident['repoze.who.userid'] in owners:
-                    authd.append(item)
-        return authd
-    else:
-        authd = []
-        return authd
-        
+                 for p in i.permissions:
+                     if p.permission_name in permission:
+                         silos.append(i.silo)    
+    return silos
 
 def allowable_id(identifier):
     if ID_PATTERN.match(identifier):
@@ -177,6 +145,7 @@ def create_new(silo, id, creator, title=None, embargoed=None, embargoed_until=No
     item.metadata['uuid'] = uuid4().hex
     item.add_namespace('oxds', "http://vocab.ox.ac.uk/dataset/schema#")
     item.add_triple(item.uri, u"rdf:type", "oxds:DataSet")
+
     item.metadata['embargoed_until'] = ''
     item.del_triple(item.uri, u"oxds:isEmbargoed")
     item.del_triple(item.uri, u"oxds:embargoedUntil")

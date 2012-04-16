@@ -30,10 +30,11 @@ from recordsilo import Granary
 from redis import Redis
 
 from rdfdatabank.lib.utils import authz
+from rdfdatabank.lib.data_sync import sync_members
 from rdfdatabank.lib.htpasswd import HtpasswdFile
 from rdfdatabank.lib.broadcast import BroadcastToRedis
 
-from rdfdatabank.config.users import _USERS
+#from rdfdatabank.config.users import _USERS
 from rdfdatabank.config.namespaces import NAMESPACES, PREFIXES
 
 class Globals(object):
@@ -51,7 +52,7 @@ class Globals(object):
         """
         
         self.authz = authz
-        self.users = _USERS
+        #self.users = _USERS
         self.NAMESPACES = NAMESPACES
         self.PREFIXES = PREFIXES
 
@@ -135,3 +136,4 @@ class Globals(object):
         if config.has_key("api.version"):
             self.api_version = config['api.version']
 
+        sync_members(self.granary)
