@@ -37,15 +37,15 @@
   % for u in c.users:
     % if 'name' in u and u['name']:
       <li><a href="/${c.silo}/users/${u['user_name']}">${u['name']}</a>
-      <a class="delete" href="/${c.silo}/users/${u['user_name']}" data-remove="delete_${c.silo}_${u['user_name']}">
+    % else:
+      <li><a href="/${c.silo}/users/${u['user_name']}">${u['firstname']} ${u['lastname']}</a>
+    % endif
+    <a class="delete" href="/${c.silo}/users/${u['user_name']}" data-remove="delete_${c.silo}_${u['user_name']}">
     <img src="/static/styles/images/user-delete-icon-16.png" alt="Delete user from silo" title="Delete ${u['user_name']} from ${c.silo}"/></a>
-      <ul class="metadata">
+    <ul class="metadata">
       <li><label>Username</label> (${u['user_name']})</li>
       <li><label>Role</label>${u['permission']}</li>
-      </ul></li>
-    % else:
-      <li><a href="/users/${u['user_name']}">${u['firstname']} ${u['lastname']} (${u['user_name']}) - role:${u['permission']}</a></li>
-    % endif
+    </ul></li>
   % endfor
   </ul>
 % endif
