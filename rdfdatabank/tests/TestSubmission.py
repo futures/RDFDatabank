@@ -76,6 +76,11 @@ from RDFDatabankConfig import RDFDatabankConfig as RC
 RDFDatabankConfig = RC()
 
 logger = logging.getLogger('TestSubmission')
+#hdlr = logging.FileHandler('TestSubmission.log')
+#fmt = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
+#hdlr.setFormatter(fmt)
+#logger.addHandler(hdlr)
+#logger.setLevel(logging.DEBUG)
 
 class TestSubmission(SparqlQueryTestCase.SparqlQueryTestCase):
     """
@@ -276,7 +281,7 @@ class TestSubmission(SparqlQueryTestCase.SparqlQueryTestCase):
                 reqdata, reqtype, 
                 endpointpath=RDFDatabankConfig.endpointpath,
                 resource="users/%s"%RDFDatabankConfig.endpointuser, 
-                expect_status=200, expect_reason="OK")
+                expect_status=400, expect_reason="Bad Request")
         else:
             (resp,respdata)= self.doHTTP_POST(
                 reqdata, reqtype, 
@@ -298,7 +303,7 @@ class TestSubmission(SparqlQueryTestCase.SparqlQueryTestCase):
             pass
         #self.assertEquals(data['firstname'], 'Sandbox', "user info: firstname")
         #self.assertEquals(data['lastname'], 'User', "user info: lastname")
-        self.assertEquals(data['groups'], [[silo_name, 'submitter']], "user info: membership")
+        self.failUnless([silo_name, 'submitter'] in data['groups'], "user info: membership")
         return
 
     def testListSilos(self):
@@ -4291,6 +4296,134 @@ class TestSubmission(SparqlQueryTestCase.SparqlQueryTestCase):
             resource="datasets/TestSubmission", 
             expect_status="*", expect_reason="*")
 
+    def testZ1DeleteUserMembership(self):
+        self.setRequestUserPass(
+            endpointuser=RDFDatabankConfig.endpointadminuser,
+            endpointpass=RDFDatabankConfig.endpointadminpass)
+        # Access user details, check response
+        (resp, data) = self.doHTTP_GET(
+            endpointpath="/",
+            resource="users/%s"%RDFDatabankConfig.endpointuser,
+            expect_status=200, expect_reason="OK", expect_type="application/JSON")
+        membershipExists = False
+        silo_name = RDFDatabankConfig.endpointpath.strip('/')
+        if [silo_name, 'submitter'] in data['groups']:
+            membershipExists = True
+        if membershipExists:
+            resp = self.doHTTP_DELETE(
+                endpointpath=RDFDatabankConfig.endpointpath,
+                resource="users/%s"%RDFDatabankConfig.endpointuser, 
+                expect_status=200, expect_reason="OK")
+        else:
+            resp = self.doHTTP_DELETE(
+                endpointpath=RDFDatabankConfig.endpointpath,
+                resource="users/%s"%RDFDatabankConfig.endpointuser, 
+                expect_status=400, expect_reason="Bad Request")
+        #Access user details
+        (resp, data) = self.doHTTP_GET(
+            endpointpath=RDFDatabankConfig.endpointpath,
+            resource="users/%s"%RDFDatabankConfig.endpointuser,
+            expect_status=404, expect_reason="Not Found")
+        # Access user details, check response
+        (resp, data) = self.doHTTP_GET(
+            endpointpath="/",
+            resource="users/%s"%RDFDatabankConfig.endpointuser,
+            expect_status=200, expect_reason="OK", expect_type="application/JSON")
+        self.failUnless([silo_name, 'submitter'] not in data['groups'], "User membership to silo not deleted")
+        return
+
+    def testZ2DeleteSilo(self):
+        """List all silos your account has access to - GET /admin. If the silo 'sandbox' does not exist, create it"""
+        self.setRequestUserPass(
+            endpointuser=RDFDatabankConfig.endpointadminuser,
+            endpointpass=RDFDatabankConfig.endpointadminpass)
+        # Access list silos, check response
+        (resp, data) = self.doHTTP_GET(
+            endpointpath="/",
+            resource="admin/",
+            expect_status=200, expect_reason="OK", expect_type="application/JSON")
+        silo_name = RDFDatabankConfig.endpointpath.strip('/')
+        silolist = data
+        oldlen = len(silolist) 
+        if silo_name in silolist:
+            resp = self.doHTTP_DELETE(
+                endpointpath="/",
+                resource="%s/admin"%silo_name, 
+                expect_status=200, expect_reason="OK")
+            lenexpected = oldlen - 1
+        else:
+            resp = self.doHTTP_DELETE(
+                endpointpath="/",
+                resource="%s/admin"%silo_name, 
+                expect_status=404, expect_reason="Not Found")
+            lenexpected = oldlen
+        # Access list silos, check response
+        (resp, data) = self.doHTTP_GET(
+            endpointpath="/",
+            resource="silos/",
+            expect_status=200, expect_reason="OK", expect_type="application/json")
+        newsilolist = data
+        self.assertEquals(len(newsilolist), lenexpected, "number fo silos do not match")
+        for s in newsilolist: self.failUnless(s in silolist, "Silo "+s+" in new list, not in original list")
+        self.failUnless(silo_name not in newsilolist, "Silo '%s' is in new list"%silo_name)
+        return
+
+    def testZ3DeleteUser(self):
+        """Create user sandbox_user"""
+        self.setRequestUserPass(
+            endpointuser=RDFDatabankConfig.endpointadminuser,
+            endpointpass=RDFDatabankConfig.endpointadminpass)
+        # Access list silos, check response
+        (resp, data) = self.doHTTP_GET(
+            endpointpath="/",
+            resource="users/",
+            expect_status=200, expect_reason="OK", expect_type="application/JSON")
+        silo_name = RDFDatabankConfig.endpointpath.strip('/')
+        userExists = False
+        membershipExists = False
+        for user in data:
+            if RDFDatabankConfig.endpointuser in user['user_name']:
+                userExists = True
+        if userExists:
+            # Access user details, check response
+            (resp, data) = self.doHTTP_GET(
+                endpointpath="/",
+                resource="users/%s"%RDFDatabankConfig.endpointuser,
+                expect_status=200, expect_reason="OK", expect_type="application/JSON")
+            if len(data['groups']) > 0:
+                membershipExists = True
+            if membershipExists:
+                resp = self.doHTTP_DELETE(
+                    endpointpath="/",
+                    resource="users/%s"%RDFDatabankConfig.endpointuser, 
+                    expect_status=403, expect_reason="Forbidden")
+                #Access user details
+                (resp, data) = self.doHTTP_GET(
+                    endpointpath="/",
+                    resource="users/%s"%RDFDatabankConfig.endpointuser,
+                    expect_status=200, expect_reason="OK")
+            else:
+                resp = self.doHTTP_DELETE(
+                    endpointpath="/",
+                    resource="users/%s"%RDFDatabankConfig.endpointuser, 
+                    expect_status=200, expect_reason="OK")
+                #Access user details
+                (resp, data) = self.doHTTP_GET(
+                    endpointpath="/",
+                    resource="users/%s"%RDFDatabankConfig.endpointuser,
+                    expect_status=404, expect_reason="Not Found")
+        else:
+            resp = self.doHTTP_DELETE(
+                endpointpath="/",
+                resource="users/%s"%RDFDatabankConfig.endpointuser, 
+                expect_status=400, expect_reason="Bad Request")
+            #Access user details
+            (resp, data) = self.doHTTP_GET(
+                endpointpath="/",
+                resource="users/%s"%RDFDatabankConfig.endpointuser,
+                expect_status=404, expect_reason="Not Found")
+        return
+
     # Sentinel/placeholder tests
 
     def testUnits(self):
@@ -4362,6 +4495,9 @@ def getTestSuite(select="unit"):
             , "testUpdateUnpackedDataset"
             , "testReferencedMetadataMerging"
             , "testReferencedMetadataMerging2"
+            , "testZ1DeleteUserMembership"
+            , "testZ2DeleteSilo"
+            , "testZ3DeleteUser"
             ],
         "component":
             [ "testComponents"
