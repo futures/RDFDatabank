@@ -47,8 +47,7 @@ class AdminController(BaseController):
             abort(401, "Not Authorised")
         ident = request.environ.get('repoze.who.identity')
         c.ident = ident
-        granary_list = ag.granary.silos
-        c.granary_list = ag.authz(granary_list, ident, permission=['administrator', 'manager'])
+        c.granary_list = ag.authz(ident, permission=['administrator', 'manager'])
 
         http_method = request.environ['REQUEST_METHOD']
 
@@ -157,6 +156,9 @@ class AdminController(BaseController):
                 for a in submitters:
                     all_silo_users.append((a, 'submitter'))
                 add_group_users(params['silo'], all_silo_users)
+
+                ag.granary.state.revert()
+                ag.granary._register_silos()
  
                 # conneg return
                 accept_list = None
@@ -201,8 +203,7 @@ class AdminController(BaseController):
             abort(404)
         ident = request.environ.get('repoze.who.identity')
         c.ident = ident
-        granary_list = ag.granary.silos
-        silos = ag.authz(granary_list, ident, permission=['administrator', 'manager'])
+        silos = ag.authz(ident, permission=['administrator', 'manager'])
         if not silo in silos:
             abort(403, "Do not have administrator or manager credentials for silo %s"%silo)
         user_groups = list_user_groups(ident['user'].user_name)

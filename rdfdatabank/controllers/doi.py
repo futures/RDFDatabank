@@ -32,6 +32,7 @@ from rdfdatabank.lib.base import BaseController, render
 from rdfdatabank.lib.conneg import MimeType as MT, parse as conneg_parse
 from rdfdatabank.lib.HTTP_request import HTTPRequest
 from rdfdatabank.lib import short_pid
+from rdfdatabank.lib.auth_entry import list_silos
 from rdfdatabank.lib.doi_helper import get_doi_metadata, doi_count
 
 from rdfdatabank.config.doi_config import OxDataciteDoi
@@ -50,7 +51,7 @@ class DoiController(BaseController):
 
         http_method = request.environ['REQUEST_METHOD']
 
-        granary_list = ag.granary.silos
+        granary_list = list_silos()
         if not silo in granary_list:
             abort(404)
 
@@ -87,17 +88,17 @@ class DoiController(BaseController):
             #identity management of item 
             if not request.environ.get('repoze.who.identity'):
                 abort(401, "Not Authorised")
-            silos = ag.authz(granary_list, ident)      
+            silos = ag.authz(ident)      
             if silo not in silos:
                 abort(403, "Forbidden")
-            silos_admin = ag.authz(granary_list, ident, permission='administrator')
-            silos_manager = ag.authz(granary_list, ident, permission='manager')
+            silos_admin = ag.authz(ident, permission='administrator')
+            silos_manager = ag.authz(ident, permission='manager')
             #if not (ident['repoze.who.userid'] == creator or ident.get('role') in ["admin", "manager"]):
             if not (ident['repoze.who.userid'] == creator or silo in silos_admin or silo in silos_manager):
                 abort(403, "Forbidden")
         elif http_method == "GET":
-            silos_admin = ag.authz(granary_list, ident, permission='administrator')
-            silos_manager = ag.authz(granary_list, ident, permission='manager')
+            silos_admin = ag.authz(ident, permission='administrator')
+            silos_manager = ag.authz(ident, permission='manager')
             #if ident['repoze.who.userid'] == creator or ident.get('role') in ["admin", "manager"]:
             if ident['repoze.who.userid'] == creator or silo in silos_admin or silo in silos_manager:
                 c.editor = True

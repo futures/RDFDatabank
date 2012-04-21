@@ -57,7 +57,7 @@
     <li><label for="roles">Roles:</label></li>
     <ul>
     % for g, p in c.user['groups']:
-        <li>${p}</li>
+        <li>${p} for <a href="/${g}">${g}</a></li>
     % endfor
     </ul>
   % endif

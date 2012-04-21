@@ -40,21 +40,21 @@ from uuid import uuid4
 import re
 from collections import defaultdict
 
-from rdfdatabank.lib.auth_entry import list_silos
+from rdfdatabank.lib.auth_entry import list_silos, list_user_groups
 
 ID_PATTERN = re.compile(r"^[0-9A-z\-\:]+$")
 
-def authz(granary_list, ident, permission=None):
+def authz(ident, permission=[]):
     #NOTE: g._register_silos() IS AN EXPENSIVE OPERATION. LISTING SILOS FROM DATABASE INSTEAD
     #g = ag.granary
     #g.state.revert()
     #g._register_silos()
     #granary_list = g.silos
     granary_list = list_silos()
-
     if permission and not type(permission).__name__ == 'list':
         permission = [permission]
-
+    if not permission:
+        permission = [] 
     silos = []
     for i in ident['user'].groups:
         if i.silo == '*':
@@ -65,7 +65,30 @@ def authz(granary_list, ident, permission=None):
             else:
                  for p in i.permissions:
                      if p.permission_name in permission:
-                         silos.append(i.silo)    
+                         silos.append(i.silo)
+    """
+    user_groups = list_user_groups(ident['repoze.who.userid'])
+    for g,p in user_groups:
+        if g == '*':
+            f = open('/var/log/databank/authz.log', 'a')
+            f.write('List of all Silos: %s\n'%str(granary_list))
+            f.write('List of user groups: %s\n'%str(user_groups))
+            f.write('Permissions to match: %s\n'%str(permission))
+            f.write('Group is *. Returning all silos\n\n')
+            f.close()
+            return granary_list
+        if g in granary_list and not g in silos:
+            if not permission:
+                silos.append(g)
+            elif p in permission:
+                silos.append(g)
+    f = open('/var/log/databank/authz.log', 'a')
+    f.write('List of all Silos: %s\n'%str(granary_list))
+    f.write('List of user groups: %s\n'%str(user_groups))
+    f.write('Permissions to match: %s\n'%str(permission))
+    f.write('List of auth Silos: %s\n\n'%str(silos))
+    f.close()
+    """
     return silos
 
 def allowable_id(identifier):
