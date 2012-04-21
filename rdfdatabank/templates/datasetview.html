@@ -62,9 +62,7 @@ c.current = c.id
     <img src="/static/styles/images/file-add-icon-24.png"/>Add metadata</a></li>
   <li><a href="#upload_file" onclick="showhide('upload_file');">
     <img src="/static/styles/images/file-new-icon-24.png"/>Upload file</a></li>
-  <!-- <li><a href="#delete_dataset" onclick="showhide('delete_dataset');">
-    <img src="/static/styles/images/delete-icon-24.png"/>Delete dataset</a></li> -->
-  <li><a class="delete" href="/${c.silo_name}/datasets/${c.id}" data-remove="${"_".join(c.silo_name.split("."))}_${"_".join(c.id.split(":"))}">
+  <li><a class="delete" href="/${c.silo_name}/datasets/${c.id}" data-remove="${"_".join(c.silo_name.split("."))}_${"_".join(c.id.split(":"))}" data-url="/${c.silo_name}/datasets">
     <img src="/static/styles/images/delete-icon-24.png"/>Delete dataset</a></li>
   % if c.zipfiles:
   <li><a href="#unpack_endpoints" onclick="showhide('unpack_endpoints');">
@@ -179,14 +177,6 @@ c.current = c.id
     <%include file="/file_upload.html"/>
     <div class="top"><a href="#top" onclick="showhide('upload_file');" title="Back to top"><img src="/static/styles/images/go-up-icon-24.png"/></a></div>
     </div>
-    <!-- Link to delete the dataset -->
-    <!--
-    <div id="delete_dataset" class="edit_section" style="display: none;">
-    <a name="delete_dataset"></a>
-    <h2><a class="delete" href="/${c.silo_name}/datasets/${c.id}" data-remove="${"_".join(c.silo_name.split("."))}_${"_".join(c.id.split(":"))}">Delete dataset</a></h2>
-    <div class="top"><a href="#top" onclick="showhide('delete_dataset');" title="Back to top"><img src="/static/styles/images/go-up-icon-24.png"/></a>
-    </div>
-    -->
     <!-- Unpack zipfiles -->
     % if c.zipfiles:
       <div id="unpack_endpoints" class="edit_section" style="display: none;">
