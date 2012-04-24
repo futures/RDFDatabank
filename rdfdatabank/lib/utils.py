@@ -25,7 +25,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 from datetime import datetime, timedelta
 from dateutil.relativedelta import *
 from dateutil.parser import parse
-from time import sleep
+from time import sleep, strftime
 import os
 import simplejson
 
@@ -401,7 +401,11 @@ def extract_metadata(item):
     for o in g.objects(URIRef(item.uri), ag.NAMESPACES['dcterms']['abstract']):
         m['abstract'].append(o)
     for o in g.objects(URIRef(item.uri), ag.NAMESPACES['dcterms']['created']):
-        m['created'].append(o)
+        try:
+            dt = formatDate(str(o))
+        except:
+            dt = o
+        m['created'].append(dt)
     for o in g.objects(URIRef(item.uri), ag.NAMESPACES['dcterms']['description']):
         m['description'].append(o)
     for o in g.objects(URIRef(item.uri), ag.NAMESPACES['dcterms']['hasVersion']):
@@ -415,7 +419,11 @@ def extract_metadata(item):
     for o in g.objects(URIRef(item.uri), ag.NAMESPACES['dcterms']['mediator']):
         m['mediator'].append(o)
     for o in g.objects(URIRef(item.uri), ag.NAMESPACES['dcterms']['modified']):
-        m['modified'].append(o)
+        try:
+            dt = formatDate(str(o))
+        except:
+            dt = o
+        m['modified'].append(dt)
     for o in g.objects(URIRef(item.uri), ag.NAMESPACES['dcterms']['publisher']):
         m['publisher'].append(o)
     for o in g.objects(URIRef(item.uri), ag.NAMESPACES['dcterms']['rights']):
@@ -424,11 +432,14 @@ def extract_metadata(item):
         m['subject'].append(o)
     for o in g.objects(URIRef(item.uri), ag.NAMESPACES['dcterms']['title']):
         m['title'].append(o)
-
     for o in g.objects(URIRef(item.uri), ag.NAMESPACES['oxds']['isEmbargoed']):
         m['isEmbargoed'].append(o)
     for o in g.objects(URIRef(item.uri), ag.NAMESPACES['oxds']['embargoedUntil']):
-        m['embargoedUntil'].append(o)
+        try:
+            dt = formatDate(str(o))
+        except:
+            dt = o
+        m['embargoedUntil'].append(dt)
     for o in g.objects(URIRef(item.uri), ag.NAMESPACES['oxds']['currentVersion']):
         m['currentVersion'].append(o)
     for o in g.objects(URIRef(item.uri), ag.NAMESPACES['bibo']['doi']):
@@ -436,3 +447,9 @@ def extract_metadata(item):
     for o in g.objects(URIRef(item.uri), ag.NAMESPACES['ore']['aggregates']):
         m['aggregates'].append(o)
     return dict(m)
+
+def formatDate(dt):
+    dt_obj = parse(dt, dayfirst=True, yearfirst=False)
+    dt_human = dt_obj.strftime("%B %d %Y, %I:%M %p") 
+    return dt_human
+

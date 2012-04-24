@@ -153,8 +153,8 @@ class ItemsController(BaseController):
                 if not allowable_id2(target_dataset_name):
                     response.content_type = "text/plain"
                     response.status_int = 400
-                    response.status = "400 Bad request. Dataset name not valid"
-                    return "Dataset name can contain only the following characters - %s and has to be more than 1 character"%ag.naming_rule_humanized
+                    response.status = "400 Bad request. Data package name not valid"
+                    return "Data package name can contain only the following characters - %s and has to be more than 1 character"%ag.naming_rule_humanized
                 target_dataset = create_new(rdfsilo, target_dataset_name, ident['repoze.who.userid'])
                 response.status_int = 201
                 response.status = "201 Created"
@@ -321,8 +321,8 @@ class ItemsController(BaseController):
                 if not allowable_id2(target_dataset_name):
                     response.content_type = "text/plain"
                     response.status_int = 400
-                    response.status = "400 Bad request. Dataset name not valid"
-                    return "Dataset name can contain only the following characters - %s and has to be more than 1 character"%ag.naming_rule_humanized
+                    response.status = "400 Bad request. Data package name not valid"
+                    return "Data package name can contain only the following characters - %s and has to be more than 1 character"%ag.naming_rule_humanized
                 target_dataset = create_new(rdfsilo, target_dataset_name, ident['repoze.who.userid'])
                 response.status_int = 201
                 response.status = "201 Created"

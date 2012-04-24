@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 % if c.silo_name:
-<h2>Datasets:</h2>
+<h2>Data packages:</h2>
 <ul>
 <%
 n = len(c.items)
 %>
-<p>Number of Datasets: ${n}</p>
+<p>Number of Data packages: ${n}</p>
 % if n > 0:
 <table class="dataset_list">
 % for item in sorted(c.items):
@@ -13,10 +13,17 @@ n = len(c.items)
 <td><ul><li><a href="/${c.silo_name}/datasets/${item}"> ${item}</a></li></ul></td>
 <td>
 % if c.embargos and item in c.embargos and c.embargos[item]:
-  <% c.emb = c.embargos[item] %>
+  <% 
+    c.emb = c.embargos[item] 
+    from dateutil.parser import parse
+    from time import strftime
+    if c.emb[1].strip():
+      dt_obj = parse(c.emb[1].strip(), dayfirst=True, yearfirst=False)
+      dt_human = dt_obj.strftime('%B %d %Y, %I:%M %p')
+  %>
   % if c.emb[0] == True or c.emb[0] == 1 or (isinstance(c.emb[0], basestring) and c.emb[0].strip().lower() in ['true', '1']):
      % if (isinstance(c.emb[1], basestring) and c.emb[1].strip()):
-        Data package is embargoed until ${c.emb[1]}
+        Data package is embargoed until ${dt_human}
      % else:
         Data package is embargoed indefinitely
      % endif

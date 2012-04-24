@@ -454,7 +454,7 @@ class TestSubmission(SparqlQueryTestCase.SparqlQueryTestCase):
         (resp,respdata) = self.doHTTP_POST(
             reqdata, reqtype, 
             resource="datasets",
-            expect_status=409, expect_reason="Conflict: Dataset Already Exists")
+            expect_status=409, expect_reason="Conflict: Data package already exists")
         #Recreate the dataset, check response
         fields = []
         files =[]
@@ -494,17 +494,17 @@ class TestSubmission(SparqlQueryTestCase.SparqlQueryTestCase):
         names = [("TestSubmission-1", 201, "Created")
             ,("TestSubmission_2", 201, "Created")
             ,("TestSubmission:3", 201, "Created")
-            ,("TestSubmission*4", 400, "Bad request. Dataset name not valid")
-            ,("TestSubmission/5", 400, "Bad request. Dataset name not valid")
-            ,("TestSubmission\6", 400, "Bad request. Dataset name not valid")
-            ,("TestSubmission,7", 400, "Bad request. Dataset name not valid")
-            ,("TestSubmission&8", 400, "Bad request. Dataset name not valid")
-            ,("TestSubmission.9", 400, "Bad request. Dataset name not valid")
-            ,("""Test"Submission""", 400, "Bad request. Dataset name not valid")
-            ,("Test'Submission", 400, "Bad request. Dataset name not valid")
+            ,("TestSubmission*4", 400, "Bad request. Data package name not valid")
+            ,("TestSubmission/5", 400, "Bad request. Data package name not valid")
+            ,("TestSubmission\6", 400, "Bad request. Data package name not valid")
+            ,("TestSubmission,7", 400, "Bad request. Data package name not valid")
+            ,("TestSubmission&8", 400, "Bad request. Data package name not valid")
+            ,("TestSubmission.9", 400, "Bad request. Data package name not valid")
+            ,("""Test"Submission""", 400, "Bad request. Data package name not valid")
+            ,("Test'Submission", 400, "Bad request. Data package name not valid")
             #,("""Test Submission""", 400, "Bad request. Dataset name not valid") #The name is truncated to Test and dataset is created. This does not happen when using the form
-            ,("TestSubmission$", 400, "Bad request. Dataset name not valid")
-            ,("T", 400, "Bad request. Dataset name not valid")
+            ,("TestSubmission$", 400, "Bad request. Data package name not valid")
+            ,("T", 400, "Bad request. Data package name not valid")
         ]
         files =[]
         for name, status, reason in names:

@@ -27,7 +27,7 @@ import re, os, shutil, codecs
 import simplejson
 from datetime import datetime, timedelta
 from dateutil.relativedelta import *
-from dateutil.parser import parse
+#from dateutil.parser import parse
 import time
 from uuid import uuid4
 from pylons import request, response, session, tmpl_context as c, url, app_globals as ag
@@ -122,8 +122,8 @@ class DatasetsController(BaseController):
             if c_silo.exists(params['id']):
                 response.content_type = "text/plain"
                 response.status_int = 409
-                response.status = "409 Conflict: Dataset Already Exists"
-                return "Dataset Already Exists"
+                response.status = "409 Conflict: Data package already exists"
+                return "Data package already exists"
 
             # Supported params:
             # id, title, embargoed, embargoed_until, embargo_days_from_now
@@ -131,8 +131,8 @@ class DatasetsController(BaseController):
             if not allowable_id2(id):
                 response.content_type = "text/plain"
                 response.status_int = 400
-                response.status = "400 Bad request. Dataset name not valid"
-                return "Dataset name can contain only the following characters - %s and has to be more than 1 character"%ag.naming_rule_humanized
+                response.status = "400 Bad request. Data package name not valid"
+                return "Data package name can contain only the following characters - %s and has to be more than 1 character"%ag.naming_rule_humanized
 
             del params['id']
             item = create_new(c_silo, id, ident['repoze.who.userid'], **params)
@@ -358,8 +358,8 @@ class DatasetsController(BaseController):
                 if not allowable_id2(id):
                     response.content_type = "text/plain"
                     response.status_int = 400
-                    response.status = "400 Bad request. Dataset name not valid"
-                    return "Dataset name can contain only the following characters - %s and has to be more than 1 character"%ag.naming_rule_humanized
+                    response.status = "400 Bad request. Data package name not valid"
+                    return "Data package name can contain only the following characters - %s and has to be more than 1 character"%ag.naming_rule_humanized
                 params = {}
                 item = create_new(c_silo, id, ident['repoze.who.userid'], **params)
                 code = 201
