@@ -79,9 +79,9 @@ if __name__ == "__main__":
     rq = RedisQueue(c.get(worker_section, "listento"), "solr_%s" % worker_number,
                   db=c.get(redis_section, "db"), 
                   host=c.get(redis_section, "host"), 
-                  port=c.get(redis_section, "port",
+                  port=c.get(redis_section, "port"),
                   errorqueue=c.get(worker_section, "errorq")
-                  )
+                 )
     DB_ROOT = c.get(worker_section, "dbroot")
     rdfdb_config = Config("%s/production.ini" % DB_ROOT)
     granary_root = rdfdb_config.get("app:main", "granary.store", 0, {'here':DB_ROOT})
