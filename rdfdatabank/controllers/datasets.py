@@ -623,13 +623,19 @@ class DatasetsController(BaseController):
             if not (ident['repoze.who.userid'] == creator or silo in silos_admin or silo in silos_manager):
                 abort(403)
 
-            c_silo.del_item(id)
-            
+            try:
+                ag.r.delete("%s:%s:embargoed_until" % (c_silo.state['storage_dir'], id))
+                ag.r.delete("%s:%s:embargoed" % (c_silo.state['storage_dir'], id))
+            except:
+                pass
+
             # Broadcast deletion
             try:
                 ag.b.deletion(silo, id, ident=ident['repoze.who.userid'])
             except:
                 pass
+
+            c_silo.del_item(id)
             
             response.content_type = "text/plain"
             response.status_int = 200

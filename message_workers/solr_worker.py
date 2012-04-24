@@ -79,7 +79,8 @@ if __name__ == "__main__":
     rq = RedisQueue(c.get(worker_section, "listento"), "solr_%s" % worker_number,
                   db=c.get(redis_section, "db"), 
                   host=c.get(redis_section, "host"), 
-                  port=c.get(redis_section, "port")
+                  port=c.get(redis_section, "port",
+                  errorqueue=c.get(worker_section, "errorq")
                   )
     DB_ROOT = c.get(worker_section, "dbroot")
     rdfdb_config = Config("%s/production.ini" % DB_ROOT)
@@ -125,7 +126,7 @@ if __name__ == "__main__":
                        logger.error("%s\n\n" %str(e))
                     except:
                        pass
-                    rq.task_complete()
+                    rq.task_failed()
                     continue
             rq.task_complete()
         elif msg['type'] == "d":
