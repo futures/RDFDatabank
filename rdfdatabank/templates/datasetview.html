@@ -110,6 +110,7 @@ c.current = c.id
    from dateutil.parser import parse
    from time import strftime
    c.emb = c.embargos[c.current] 
+   dt_human = c.emb[1]
    if c.emb[1] and c.emb[1].strip():
        dt_obj = parse(c.emb[1].strip(), dayfirst=True, yearfirst=False)
        dt_human = dt_obj.strftime('%B %d %Y, %I:%M %p')

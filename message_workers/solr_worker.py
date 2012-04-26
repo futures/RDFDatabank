@@ -106,10 +106,14 @@ if __name__ == "__main__":
             rq.task_complete()
             continue
         if silo_name not in g.silos:
-            logger.error("Silo %s does not exist\n"%silo_name)
-            rq.task_complete()
-            #raise NoSuchSilo
-            continue
+            g = Granary(granary_root)
+            g.state.revert()
+            g._register_silos()
+            if silo_name not in g.silos:
+                logger.error("Silo %s does not exist\n"%silo_name)
+                rq.task_complete()
+                #raise NoSuchSilo
+                continue
         if msg['type'] == "c" or msg['type'] == "u" or msg['type'] == "embargo":
             s = g.get_rdf_silo(silo_name)
             # Creation, update or embargo change

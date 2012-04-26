@@ -1000,7 +1000,8 @@ class DatasetsController(BaseController):
                 item.add_triple(item.uri, u"oxds:currentVersion", item.currentversion)
                 item.sync()
                 try:
-                    ag.b.deletion(silo, id, path, ident=ident['repoze.who.userid'])
+                    #ag.b.deletion(silo, id, path, ident=ident['repoze.who.userid'])
+                    ag.b.change(silo, id, path, ident=ident['repoze.who.userid'])
                 except:
                     pass
                 response.content_type = "text/plain"
@@ -1016,7 +1017,8 @@ class DatasetsController(BaseController):
                 item.add_triple(item.uri, u"dcterms:modified", datetime.now())
                 item.sync()
                 try:
-                    ag.b.deletion(silo, id, path, ident=ident['repoze.who.userid'])
+                    #ag.b.deletion(silo, id, path, ident=ident['repoze.who.userid'])
+                    ag.b.change(silo, id, path, ident=ident['repoze.who.userid'])
                 except:
                     pass
                 response.content_type = "text/plain"

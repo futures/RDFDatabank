@@ -34,6 +34,9 @@ pkg_resources.working_set.add_entry('/var/lib/databank')
 import os
 os.environ['PYTHON_EGG_CACHE'] = '/var/cache/databank/egg-cache'
 
+import sys
+sys.stdout = sys.stderr
+
 # Load the Pylons application
 from paste.deploy import loadapp
 application = loadapp('config:/var/lib/databank/production.ini')
