@@ -203,6 +203,7 @@ class AdminController(BaseController):
             abort(404)
         ident = request.environ.get('repoze.who.identity')
         c.ident = ident
+        c.silo = silo
         silos = ag.authz(ident, permission=['administrator', 'manager'])
         if not silo in silos:
             abort(403, "Do not have administrator or manager credentials for silo %s"%silo)

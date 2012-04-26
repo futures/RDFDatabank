@@ -63,7 +63,11 @@
     <li><label for="roles">Roles:</label></li>
     <ul>
     % for g, p in c.user['groups']:
-        <li>${p} for <a href="/${g}">${g}</a></li>
+        % if g == '*':
+            <li>Databank administrator</li>
+        % else:    
+            <li>${p} for <a href="/${g}">${g}</a></li>
+        % endif
     % endfor
     </ul>
   % endif
