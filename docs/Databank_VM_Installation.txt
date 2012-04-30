@@ -261,7 +261,7 @@ VIII. Installing SOLR with Tomcat and cutomizing SOLR for Databank
     sudo ln -sf /etc/default/databank/schema.xml /etc/solr/conf/schema.xml  
 
     # Start tomcat and test solr is working fine by visting http://localhost:8080/solr
-    /etc/init.d/tomcat6 stop
+    /etc/init.d/tomcat6 start
 
 ------------------------------------------------------------------------------------------------------
 IX. Setting up Supervisor to manage the message workers
@@ -336,7 +336,7 @@ XI. Integrate Databank with Apache
 1. Install Apache and the required libraries 
     sudo apt-get install apache2 apache2-utils libapache2-mod-wsgi
 
-2. Stop Apache before maiing any modification   
+2. Stop Apache before making any modification   
     sudo /etc/init.d/apache2 stop
 
 3. Add a new site in apache sites-available called 'databank_ve27_wsgi'
