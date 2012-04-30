@@ -11,7 +11,7 @@ Indexing items in Databank for search and retreival using SOLR, Redis and Superv
 
     * The configuration file for each of the processes maintained by supervisor is available at workers_available.
 
-    * These are symlonled to /etc/supervisor/conf.d/---
+    * These are symlinked to /etc/supervisor/conf.d/---
 
 
 
@@ -33,6 +33,8 @@ Indexing items in Databank for search and retreival using SOLR, Redis and Superv
 
     * worker_solr works off the items queued in the solrindex queue. It is used to index documents / delete documents from solr
       * For each item, it gets the manifest from for the item the granary store, walks through the triples, genrates a solr document and adds the document to solr. It commits the index every hour or when no futher items are queued for indexing. If there is an error, the item is pushed to the queue solrindexerror and the error is logged in the file /var/log/databank/solr_error.log. 
+
+
 
 The following is the python code to query redis 
 
