@@ -290,7 +290,7 @@ class SwordDataBank(SwordServer):
             #self.dao.remove_content(collection, id, True, keep_atom)
             #Increment the version, but do not clone the previous version.
             # An update will replace the entire contents of the container (if previously unpacked) with the bagit file
-            dataset.increment_version_delta(clone_previous_version=False, copy_filenames=['manifest.rdf'])
+            dataset.increment_version_delta(clone_previous_version=True, copy_filenames=['manifest.rdf'])
 
             # store the content file
             dataset.put_stream(deposit.filename, deposit.content)
