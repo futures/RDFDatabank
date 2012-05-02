@@ -153,14 +153,10 @@ path_url = "/%s/datasets/%s"%(c.silo_name,c.id)
 <div class="nav_rt">
   % if c.user_logged_in_name:
     <p>Welcome <a href="/users/${c.user_logged_in_name}">${c.user_logged_in_name}</a></p>
+    <p><a href="/logout_handler?came_from=${current_url}">Logout</a></p>
+  % else:
+    <p><a href="/login?came_from=${current_url}">Login</a></p>
   % endif
-  <p>
-  % if c.user_logged_in_name:
-    <a href="/logout_handler?came_from=${current_url}">Logout</a>
-  ## % else:
-  ##  <a href="/login?came_from=${current_url}">Login</a>
-  % endif
-  </p>
 </div>
 
 

@@ -637,13 +637,30 @@ padding-top: 7px;
 
 
 .nav_rt {
-    position: absolute;
-    right: 5px;
-    top: 5px;
-    color: #000;
-    text-align: right;
+	
+	background: #FDFEFE;
+	filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#fdfefe', endColorstr='#f4f7fa');
+	background: -webkit-gradient(linear, left top, left bottom, from(#FDFEFE), to(#F4F7FA));
+	background: -moz-linear-gradient(top, #FDFEFE, #F4F7FA);
+	border: 1px solid #DFE2E4;
+	border-bottom-width: 3px;
+	-moz-border-radius: 5px;
+	-webkit-border-radius: 5px;
+	border-radius: 5px;
+	clear: both;
+	color: #000;margin: 0px 0px 15px 0px;
+	padding: 5px;
+	position: absolute;
+	right: 5px;
+	top: 5px;
+	text-align: right;
 }
 
+
+.nav_rt p{
+	display: inline;
+	margin: 0px 5px 0px 0px;
+}
 
 footer.site
 {
