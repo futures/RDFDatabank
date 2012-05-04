@@ -53,12 +53,14 @@ sed -i "s,\($TARGET_KEY *= *\).*,\1$dbstore," $CONFIG_FILE2
 #replace granary uri root
 echo "Setting Base URI: " $dburi
 TARGET_KEY=granary.uri_root
-[ $dburi != "*/" ] && dburi="$dburi""/"
+#[ $dburi != "*/" ] && dburi="$dburi""/"
+dburi=${dburi%/}
+dburi="$dburi""/"
 sed -i "s,\($TARGET_KEY *= *\).*,\1$dburi," $CONFIG_FILE1
 sed -i "s,\($TARGET_KEY *= *\).*,\1$dburi," $CONFIG_FILE2
 TARGET_KEY1='    "base_url"'
 TARGET_KEY2='    "db_base_url"'
-val1='"'$dburi'swordv2",'
+val1='"'$dburi'swordv2/",'
 val2='"'$dburi'",'
 sed -i "s|\($TARGET_KEY1 *: *\).*|\1$val1|" $CONFIG_FILE3
 sed -i "s|\($TARGET_KEY2 *: *\).*|\1$val2|" $CONFIG_FILE3
