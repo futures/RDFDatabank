@@ -29,6 +29,7 @@ from solrFields import solr_fields_mapping
 
 import sys
 from time import sleep
+from datetime import datetime, timedelta
 from rdflib import URIRef
 import simplejson
 from collections import defaultdict
@@ -91,12 +92,28 @@ if __name__ == "__main__":
     solr = SolrConnection(c.get(worker_section, "solrurl"))
 
     idletime = 2
-
+    commit_time = datetime.now() + timedelta(hours=1)
+    toCommit = False
     while(True):
         sleep(idletime)
+
+        if datetime.now() > commit_time and toCommit:
+            solr.commit()
+            commit_time = datetime.now() + timedelta(hours=1)
+            toCommit = False
+
         line = rq.pop()
+
         if not line:
+            if toCommit:
+                solr.commit()
+                toCommit = False
+                commit_time = datetime.now() + timedelta(hours=1)
             continue
+
+        logger.debug("Got message %s" %str(line))
+
+        toCommit = True
         msg = simplejson.loads(line)
         # solr switch
         try:
@@ -105,7 +122,7 @@ if __name__ == "__main__":
             logger.error("Msg badly formed %s\n"%str(msg))
             rq.task_complete()
             continue
-        if silo_name not in g.silos:
+        if silo_name not in g.silos and not msg['type'] == "d":
             g = Granary(granary_root)
             g.state.revert()
             g._register_silos()
@@ -123,7 +140,7 @@ if __name__ == "__main__":
                 item = s.get_item(itemid)
                 solr_doc = gather_document(silo_name, item)
                 try:
-                    solr.add(_commit=True, **solr_doc)
+                    solr.add(_commit=False, **solr_doc)
                 except Exception, e :
                     logger.error("Error adding document to solr id:%s in silo:%s\n" % (itemid, silo_name))
                     try:
@@ -137,7 +154,12 @@ if __name__ == "__main__":
             # Deletion
             itemid = msg.get('id')
             if itemid:
+                logger.info("Got deletion message on id:%s in silo:%s" % (itemid, silo_name))
                 query='silo:"%s" AND id:"%s"'%(silo_name, itemid)
                 solr.delete_query(query)
-                solr.commit()
+            elif silo_name:
+                logger.info("Got deletion message on silo:%s" %silo_name)
+                query='silo:"%s"'%silo_name
+                solr.delete_query(query)
+                #solr.commit()
             rq.task_complete()

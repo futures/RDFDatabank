@@ -364,14 +364,14 @@ class AdminController(BaseController):
             # Walk through all the items, emit a delete msg for each
             # and then remove the silo
             todelete_silo = ag.granary.get_rdf_silo(silo)
-            for item in todelete_silo.list_items():
-                try:
-                    ag.b.deletion(silo_name, item, ident=ident['repoze.who.userid'])
-                except:
-                    pass
+            #for item in todelete_silo.list_items():
+            #    try:
+            #        ag.b.deletion(silo, item, ident=ident['repoze.who.userid'])
+            #    except:
+            #        pass
             ag.granary.delete_silo(silo)
             try:
-                ag.b.silo_deletion(silo_name, ident=ident['repoze.who.userid'])
+                ag.b.silo_deletion(silo, ident=ident['repoze.who.userid'])
             except:
                 pass
             try:

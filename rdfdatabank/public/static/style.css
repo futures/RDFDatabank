@@ -154,14 +154,6 @@ h1 {
     margin-right: 5px;
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-/* header styling */
-
-
-
-=======
->>>>>>> upstream/master
 h1, h2, h3, h4, h5, h6
 {
 clear: both;
@@ -171,12 +163,7 @@ font-weight: normal;
 letter-spacing: 0.1em;
 margin: 1.3em 0px 0.3em 0px;
 border-bottom: 1px solid #b5d2df;
-<<<<<<< HEAD
-
-=======
-=======
 }
->>>>>>> upstream/master
 /* Results Page Specific CSS */
 
 #results {
@@ -464,19 +451,13 @@ width: 40px;
 }
 
 .itemsppformchosen {
-<<<<<<< HEAD
     color: black;
     border: 1px solid #666;
     background: #FFFF99;
->>>>>>> upstream/master
 }
 
 .httperror h1{
     font-size: 2em;
-=======
-color: black;
-border: 1px solid #666;
-background: #FFFF99;
 }
 
 .create_silo label, .alter_silo label, .create_user label {
@@ -504,7 +485,6 @@ padding: 0px;
 margin: 0px 0px 10px 0px;
 padding: 0px;
 list-style-type: none;
->>>>>>> upstream/master
 }
 
 .metadata li.subtitle {
