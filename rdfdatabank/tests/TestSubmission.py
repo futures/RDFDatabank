@@ -4495,9 +4495,9 @@ def getTestSuite(select="unit"):
             , "testUpdateUnpackedDataset"
             , "testReferencedMetadataMerging"
             , "testReferencedMetadataMerging2"
-            , "testZ1DeleteUserMembership"
-            , "testZ2DeleteSilo"
-            , "testZ3DeleteUser"
+            #, "testZ1DeleteUserMembership"
+            #, "testZ2DeleteSilo"
+            #, "testZ3DeleteUser"
             ],
         "component":
             [ "testComponents"

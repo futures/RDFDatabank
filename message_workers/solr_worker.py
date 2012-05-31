@@ -103,6 +103,7 @@ if __name__ == "__main__":
             toCommit = False
 
         line = rq.pop()
+
         if not line:
             if toCommit:
                 solr.commit()

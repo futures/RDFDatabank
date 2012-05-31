@@ -12,7 +12,6 @@ rdfdatabank/ /var/lib/databank/
 rdfdatabank.egg-info/ /var/lib/databank
 test.ini /var/lib/databank/
 who.ini /var/lib/databank/
-sss.conf.json /var/lib/databank/
 sss/ /var/lib/databank/
 add_user.py /var/lib/databank/
 setup_db.py /var/lib/databank/

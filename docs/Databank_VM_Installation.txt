@@ -194,7 +194,7 @@ The following settings need to be configured
     The default value is mysql://databanksqladmin:d6sqL4dm;n@localhost:3306/databankauth'
     
 5. The SOLR end point
-    Should ppoint to the databank solr instance
+    Should point to the databank solr instance
     Edit the field 'solr.host'
     The default value is http://localhost:8080/solr,
 
@@ -203,7 +203,8 @@ The following settings need to be configured
     These are treated as text strings and are currently used in the manifest.rdf 
 
  ^  This setting will also need to be modified at /var/lib/databank/rdfdatabank/tests/RDFDatabankConfig.py
-    Change 'granary_uri_root'
+    Change 'granary_uri_root'. 
+	See section XVI for the significance of the base URI
 
 ------------------------------------------------------------------------------------------------------
 VI. Customizing Databank Sword to your environment
@@ -228,15 +229,19 @@ Replace with the correct base url
 
 ------------------------------------------------------------------------------------------------------
 VII. Intialize databank and Create the main admin user to access Databank
------------------------------------------------------------------------------------------------------     
+------------------------------------------------------------------------------------------------------    
     paster setup-app production.ini
     python add_user.py admin password dataflow-devel@googlegroups.com
-
-    Replace the string password with a strong password 
+	
+	The second command is used to create the administrator user for databank.
+	* The administrator has a default username as 'admin'. 
+	* This user is the root administrator for Databank and has access to all the silos in Databank.
+	* Please choose a strong password for the user and replace the string 'password' with the password. 
 
 ------------------------------------------------------------------------------------------------------
 VIII. Installing SOLR with Tomcat and cutomizing SOLR for Databank
------------------------------------------------------------------------------------------------------     
+	  * If you already have an existing SOLR installation and would like to use that, see section XVIII
+------------------------------------------------------------------------------------------------------    
     # Install solr with tomcat
     sudo apt-get install openjdk-6-jre    
     sudo apt-get install solr-tomcat
@@ -424,4 +429,109 @@ For example, to run on port 5000, the settings would be
 host = 127.0.0.1
 port = 5000    
 
+-----------------------------------------------------------------------------------------------------
+XVI. The Base URI setting (granary.uri_root) for Databank and it's significance
+-----------------------------------------------------------------------------------------------------
+One of the configuration options available in Databank is the 'granary.uri_root' which is the base uri for Databank.
+This value is used in the following:
+	* Each of the silos created in Databank will be intialized with this base URI
+	* In each of the data packages, the metadata (held in the manifest.rdf) will use this base URI in creating the URI for the data package
+	* The links to each data item in the package will be created using this base uri (aggregate map for each data package)
+
+	If this base uri doesn't resolve, the links for each of the items in the data package will not resolve
+
+This base uri is regarded to be permanent. Modifying the base uri at some point in the future will create all new silos and the data packages within the new silos with the new base uri, but the existing silos and data packages will continue to have the old uri.
+
+-----------------------------------------------------------------------------------------------------
+XVII. Recap of the services running in Databank
+-----------------------------------------------------------------------------------------------------
+Apache2 
+	Runs the databank web server (powered by Pylons) 
+	at http://localhost or http://ip_address from your host machine
+
+ 	Apache should start automatically on startup of the VM. 
+
+ 	The apache log files are at 
+		/var/log/apache2/
+
+	The command to stop, start and restart apache are 
+		sudo /etc/init.d/apache2 [ stop | start | restart ]
+
+
+Tomcat 
+	Tomcat runs the SOLR webservice. Tomcat should start automatically on startup of the VM. 
+	Tomcat should be available at http://localhost:8080 and 
+	SOLR should be available at http://localhost:8080/solr
+
+ 	 Tomcat is installed with 
+		CATALINA_HOME in /usr/share/tomcat6, 
+		CATALINA_BASE in /var/lib/tomcat6 and 
+		configuration files in /etc/tomcat6/ 
+
+	SOLR itself lives in three spots, 
+		/usr/share/solr - contains the SOLR home director,
+		/var/lib/solr/ - contains the data directory and
+		/etc/solr – contains the configuration data
+
+	The command to stop, start and restart tomcat are 
+		sudo /etc/init.d/tomcat6 [ stop | start | restart ]
+
+
+ Redis 
+	Runs a basic messaging queue used by the API for indexing items into SOLR 
+	and storing information that need to accessed quickly (like embargo information) 
+
+ 	Redis should start automatically on startup of the VM.  
+
+	The data directory is at /var/lib/redis and the configuration is at /etc/redis 
+
+	 The command to stop, start and restart redis are 
+		sudo /etc/init.d/redis-server [ stop | start | restart ]
+
+
+Supervisor
+	Supervisor maintains the message workers run by Databank. 
+	Run the supervisor controller to manage processes maintained by supervisor
+	sudo supervisorctl
+
+------------------------------------------------------------------------------------------------------
+XVIII. Integrating SOLR for Databank with an existing SOLR installation 
+------------------------------------------------------------------------------------------------------
+If you already have a SOLR instance running and would like to add databank to it
+	- either by creating a new core (https://wiki.apache.org/solr/CoreAdmin) 
+	- or by creating a new instance 
+		http://wiki.apache.org/solr/SolrTomcat#Multiple_Solr_Webapps
+		http://wiki.apache.org/solr/SolrJetty#Running_multiple_instances
+you can do so.
+
+
+Once you have created a new core or new instance, and verified it is wotking,
+	stop SOLR, 
+	replace the example schema file for that core / instance with Databank's schema file. 
+	It is available at /etc/default/databank/schema.xml
+	Start SOLR
+
+	
+Stop Databank web server (stop apache) and the solr worker (using supervisorctl)
+
+
+You need to configure the solr end point in the config file production.ini or development.ini 
+(as mentioned in section V). 
+	In the case of mmultiple cores, the solr end point would be something like http://localhost:8080/solr/core_databank
+	if you have called the databank core 'core_databank'
+
+	In the case of mmultiple SOLR instances, the solr end point would be something like http://localhost:8080/solr_databank
+	if you have called the databank instance 'solr_databank'	
+	
+	Edit the field 'solr.host'. 
+	Replace the default value with your solr endpoint
+
+	
+You need to configure the solr end point in the config file loglines.cfg 
+located at /var/lib/databank/message_workers/ and used by the solr worker for indexing items into SOLR
+	Edit the field 'solrurl' in the section [worker_solr]. 
+	Replace the default value with your solr endpoint
+	
+Start the solr worker (using supervisorctl) and the Databank web server (start apache)
+    
 -----------------------------------------------------------------------------------------------------
