@@ -29,14 +29,14 @@ Define configuration for RDFDatabank testing
 
 class RDFDatabankConfig:
 
-    granary_uri_root="http://databank"
+    granary_uri_root="http://databank-vm1.oerc.ox.ac.uk"
     
     # Access via IP address
     endpointhost="localhost"
-    endpointpath="/sandbox/"
-    endpointpath2="/sandbox2/"
+    endpointpath="/sandbox2/"
+    endpointpath2="/sandbox3/"
 
-    endpointuser="sandbox_user"
+    endpointuser="sandbox_user2"
     endpointpass="sandbox"
 
     #Admin1 of silo1

@@ -29,10 +29,10 @@
     ############################################################################
     
     # The base url of the webservice where SSS is deployed
-    "base_url" : "http://localhost:5000/swordv2/",
+    "base_url" : "http://databank-vm1.oerc.ox.ac.uk/swordv2/",
     
     # the DataBank base url for the UI and other such reference points
-    "db_base_url" : "http://192.168.23.133/",
+    "db_base_url" : "http://databank-vm1.oerc.ox.ac.uk/",
     
     # explicitly set the sword version, so if you're testing validation of
     # service documents you can "break" it.
