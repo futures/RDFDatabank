@@ -54,6 +54,13 @@ class SilosController(BaseController):
                 abort(401, "Not Authorised")
             c.silos = ag.authz(ident)
 
+        c.silo_infos = {}
+        for silo in c.silos:
+            c.silo_infos[silo] = ''
+            state_info = ag.granary.describe_silo(silo)
+            if 'title' in state_info and state_info['title']:
+                c.silo_infos[silo]  = state_info['title']
+
         # conneg return
         accept_list = None
         if 'HTTP_ACCEPT' in request.environ:
@@ -100,7 +107,10 @@ class SilosController(BaseController):
             if silo in silos:
                 c.editor = True
         
-        rdfsilo = ag.granary.get_rdf_silo(silo)       
+        rdfsilo = ag.granary.get_rdf_silo(silo)
+        state_info = ag.granary.describe_silo(silo)
+        if 'title' in state_info and state_info['title']:
+            c.title = state_info['title']
         c.embargos = {}
         c.items = []
         for item in rdfsilo.list_items():

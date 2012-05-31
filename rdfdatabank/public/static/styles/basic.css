@@ -467,13 +467,27 @@ form
 margin: 1em;
 }
 
-form label
+.main form label
 {
 display: block;
 width: 10em;
 float: left;
 text-align: right;
 margin-right: 5px; 
+}
+
+#search form label
+{
+font-weight: normal;
+text-transform: none;
+}
+
+
+#search form fieldset
+{
+border: none;
+padding: 0px;
+
 }
 
  label 
@@ -559,14 +573,14 @@ nav  {
     position: relative;    
 }
 
-nav label.nonVis
+nav span.nonVis
 {
 color: #000;
 position: absolute;
 top: -9000px;
 }
 
-nav label
+nav span
 {
 color: #000;
 }
@@ -842,13 +856,13 @@ div.response_doc {
         border-bottom: 1px solid #999;
 }
 
-.response_doc .silotitle {
+.response_doc .resultTitle {
         font-weight: bold;
         font-size: 1.2em;
         margin-bottom: 5px;
 }
 
-.response_doc .silotitle a {
+.response_doc .resultTitle a {
         font-weight: bold;
         font-size: 1.2em;
         
@@ -870,6 +884,8 @@ div.response_doc {
 text-decoration: underline;
 
 }
+
+
 
 
 .response_doc .silotitle a:visited {
@@ -1387,7 +1403,10 @@ div.metadata {
     line-height: 1.5em;
 }
 
-div.metadata label {
+ul.metadata li {
+    margin-bottom: 5px;
+    line-height: 1.5em;
+    display: block;
 }
 
 pre {
@@ -1436,5 +1455,92 @@ pre {
 
 .admin_list a {
     margin-right: 10px;
+}
+
+form div.role {
+    width: 100%;
+    max-width: 100%;
+}
+
+form.newitem label{
+    width:100%;
+    text-align:left;
+    padding-bottom: 5px;
+}
+
+
+div.newPackage {
+
+background: #FDFEFE;filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#fdfefe', endColorstr='#f4f7fa');
+background: -webkit-gradient(linear, left top, left bottom, from(#FDFEFE), to(#F4F7FA));
+background: -moz-linear-gradient(top, #FDFEFE, #F4F7FA);
+border: 1px solid #DFE2E4;
+border-bottom-width: 3px;
+-moz-border-radius: 5px;
+-webkit-border-radius: 5px;
+border-radius: 5px;
+clear: both;
+color: black;
+margin: 0px 0px;
+padding: 5px;
+
+
+}
+
+div.newPackage h2{
+
+margin:  0px;
+}
+
+/* hide skipLinks off-screen */
+ul.skipLinks a{
+
+font-weight: bold;
+position: absolute;
+top: -9000px;
+
+}
+
+/* show skipLinks link on focus */
+ul.skipLinks a:focus{
+position: relative;
+left: 300px;
+top: 0px;
+}
+
+#accessStatusForm fieldset{
+    max-width: 90%;
+}
+
+#emu {
+    width: 250px;
+}
+
+.unpack_endpoints form label {
+    width: 25em;
+}
+
+.unpackForm fieldset {
+    max-width: 90%;
+}
+
+.manifest-form  form label {
+    width: 90%;
+    text-align: left;
+}
+
+.displayLabel {
+	font-weight: bold;
+	display: inline;
+	width: 10em;
+	float: left;
+	text-align: right;
+	margin-right: 5px; 
+	padding: 0px 5px;
+	text-transform: none;
+}
+
+.displayValues {
+	margin-left: 10em;
 }
 

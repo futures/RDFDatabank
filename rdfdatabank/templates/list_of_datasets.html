@@ -1,13 +1,12 @@
 # -*- coding: utf-8 -*-
 % if c.silo_name:
-<h2>Data packages:</h2>
 <ul>
 <%
 n = len(c.items)
 %>
 <p>Number of Data packages: ${n}</p>
 % if n > 0:
-<table class="dataset_list">
+<table class="dataset_list" summary="Table of data packages in silo">
 % for item in sorted(c.items):
 <tr>
 <td><ul><li><a href="/${c.silo_name}/datasets/${item}"> ${item}</a></li></ul></td>

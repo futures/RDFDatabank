@@ -72,6 +72,10 @@ class DatasetsController(BaseController):
                  
             #TODO: Get this information from SOLR, not the granary OR Do not get the embargo information, as that is what fails
             c_silo = ag.granary.get_rdf_silo(silo)
+            state_info = ag.granary.describe_silo(silo)
+            if 'title' in state_info and state_info['title']:
+                c.title = state_info['title']
+
             c.embargos = {}
             for item in c_silo.list_items():
                 try:
@@ -132,7 +136,7 @@ class DatasetsController(BaseController):
                 response.content_type = "text/plain"
                 response.status_int = 400
                 response.status = "400 Bad request. Data package name not valid"
-                return "Data package name can contain only the following characters - %s and has to be more than 1 character"%ag.naming_rule_humanized
+                return "Data package name can only contain %s"%ag.naming_rule_humanized
 
             del params['id']
             item = create_new(c_silo, id, ident['repoze.who.userid'], **params)

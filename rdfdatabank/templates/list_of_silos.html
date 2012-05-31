@@ -4,15 +4,15 @@
   <title> List of Silos </title>
 </%def>
 <%
-n = len(c.silos)
+n = len(c.silo_infos)
 %>
 <h1> List of Silos </h1>
-% if c.silos:
+% if c.silo_infos:
   <p>Number of silos: ${n}</p>
   <div class="silo_list">
   <ul>
-  % for silo in c.silos:
-    <li><a href="/${silo}">${silo}</a></li>
+  % for silo in c.silo_infos:
+    <li><a href="/${silo}">${c.silo_infos[silo]}</a></li>
   % endfor
   </ul>
   </div>
