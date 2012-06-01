@@ -33,8 +33,8 @@ from pylons.decorators import rest
 from paste.fileapp import FileApp
 
 from rdfdatabank.lib.base import BaseController, render
-from rdfdatabank.lib.utils import is_embargoed
-from rdfdatabank.lib.auth_entry import list_silos
+from rdfdatabank.lib.utils import is_embargoed, getSiloModifiedDate
+from rdfdatabank.lib.auth_entry import list_silos, get_datasets_count
 from rdfdatabank.lib.conneg import MimeType as MT, parse as conneg_parse
 
 JAILBREAK = re.compile("[\/]*\.\.[\/]*")
@@ -56,11 +56,15 @@ class SilosController(BaseController):
 
         c.silo_infos = {}
         for silo in c.silos:
-            c.silo_infos[silo] = ''
+            c.silo_infos[silo] = []
             state_info = ag.granary.describe_silo(silo)
             if 'title' in state_info and state_info['title']:
-                c.silo_infos[silo]  = state_info['title']
-
+                c.silo_infos[silo].append(state_info['title'])
+            else:
+                c.silo_infos[silo].append(silo)
+            c.silo_infos[silo].append(get_datasets_count(silo))
+            c.silo_infos[silo].append(getSiloModifiedDate(silo))
+         
         # conneg return
         accept_list = None
         if 'HTTP_ACCEPT' in request.environ:

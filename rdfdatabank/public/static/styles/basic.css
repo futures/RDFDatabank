@@ -1127,7 +1127,8 @@ div#link_to_this_search a {
         font-size: 13px;
         color: #002147;
         background: white;
-        width: 100%;
+        width: 50%;
+        clear:left;
 }
 
 .searchleft {
@@ -1245,6 +1246,7 @@ list-style: none;
 /*List of Datsets */
 .dataset_list {
     margin: 0px 0px 20px 0px;
+    clear: left;
 }
 
 .dataset_list tr {
@@ -1544,3 +1546,16 @@ top: 0px;
 	margin-left: 10em;
 }
 
+.siloList tr {
+    border-bottom: 0.12em solid #ccc;
+}
+
+.siloList td {
+	padding: 10px;
+}
+
+.siloList a {
+        font-weight: bold;
+        font-size: 1.2em;
+        margin-bottom: 5px;
+}

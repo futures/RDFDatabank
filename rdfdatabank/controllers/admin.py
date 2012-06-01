@@ -172,12 +172,12 @@ class AdminController(BaseController):
                 mimetype = accept_list.pop(0)
                 while(mimetype):
                     if str(mimetype).lower() in ["text/html", "text/xhtml"]:
-                        redirect(url(controller="silos", action="siloview", silo=silo))
+                        redirect(url(controller="datasets", action="siloview", silo=silo))
                     elif str(mimetype).lower() in ["text/plain", "application/json"]:
                         response.content_type = "text/plain"
                         response.status_int = 201
                         response.status = "201 Created"
-                        response.headers['Content-Location'] = url(controller="silos", action="siloview", silo=silo)
+                        response.headers['Content-Location'] = url(controller="datasets", action="siloview", silo=silo)
                         return "201 Created Silo %s" % silo
                     try:
                         mimetype = accept_list.pop(0)
@@ -187,7 +187,7 @@ class AdminController(BaseController):
                 response.content_type = "text/plain"
                 response.status_int = 201
                 response.status = "201 Created"
-                response.headers['Content-Location'] = url(controller="silos", action="siloview", silo=silo)
+                response.headers['Content-Location'] = url(controller="datasets", action="siloview", silo=silo)
                 return "201 Created Silo %s" % silo
             else:
                 response.content_type = "text/plain"

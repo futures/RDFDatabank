@@ -67,6 +67,8 @@ def make_map():
     map.connect('/{silo}/admin', controller='admin', action='siloview')
     
     map.connect('/silos', controller='silos', action='index')
+    #map.connect('/{silo}', controller='silos', action='siloview')
+
     map.connect('/{silo}', controller='datasets', action='siloview')
     map.connect('/{silo}/datasets', controller='datasets', action='siloview')
     map.connect('/{silo}/datasets/{id}', controller='datasets', action='datasetview')
