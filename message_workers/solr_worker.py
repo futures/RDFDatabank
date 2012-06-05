@@ -33,6 +33,7 @@ from datetime import datetime, timedelta
 from rdflib import URIRef
 import simplejson
 from collections import defaultdict
+from uuid import uuid4
 
 from recordsilo import Granary
 from solr import SolrConnection
@@ -115,13 +116,14 @@ if __name__ == "__main__":
 
         toCommit = True
         msg = simplejson.loads(line)
-        # solr switch
+        # get silo name
         try:
             silo_name = msg['silo']
         except:
             logger.error("Msg badly formed %s\n"%str(msg))
             rq.task_complete()
             continue
+        # Re-initialize granary
         if silo_name not in g.silos and not msg['type'] == "d":
             g = Granary(granary_root)
             g.state.revert()
@@ -134,7 +136,7 @@ if __name__ == "__main__":
         if msg['type'] == "c" or msg['type'] == "u" or msg['type'] == "embargo":
             s = g.get_rdf_silo(silo_name)
             # Creation, update or embargo change
-            itemid = msg.get('id')
+            itemid = msg.get('id', None)
             logger.info("Got creation message on id:%s in silo:%s" % (itemid, silo_name))
             if itemid and s.exists(itemid):
                 item = s.get_item(itemid)
@@ -149,6 +151,12 @@ if __name__ == "__main__":
                        pass
                     rq.task_failed()
                     continue
+            else:
+                silo_metadata = g.describe_silo(silo_name)
+                solr_doc = {'id':silo_name, 'silo':silo_name, 'type':'Silo', 'uuid':uuid4().hex}
+                solr_doc['title'] = silo_metadata['title']
+                solr_doc['description'] = silo_metadata['description']
+                solr.add(_commit=False, **solr_doc)
             rq.task_complete()
         elif msg['type'] == "d":
             # Deletion

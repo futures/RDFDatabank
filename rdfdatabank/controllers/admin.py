@@ -145,7 +145,12 @@ class AdminController(BaseController):
 
                 # Add silo to database
                 add_silo(silo)
-                
+               
+                try:
+                    ag.b.silo_creation(silo, ident=ident['repoze.who.userid'])
+                except:
+                    pass
+ 
                 #Add users belonging to the silo, to the database
                 all_silo_users = []
                 
@@ -327,6 +332,11 @@ class AdminController(BaseController):
                 #Add new silo users into database
                 if new_silo_users:
                     add_group_users(silo, new_silo_users)
+            if updateMetadata:
+                try:
+                    ag.b.silo_change(silo, ident=ident['repoze.who.userid'])
+                except:
+                    pass
                        
             # conneg return
             accept_list = None
