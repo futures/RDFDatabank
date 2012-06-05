@@ -220,9 +220,9 @@ class SearchController(BaseController):
             fields = fields.split(',')
         if fields and type(fields).__name__ == 'list':
             fields = [x.strip() for x in fields]
-        for fld in fields:
-            if fld in c.all_fields and not fld in c.chosen_fields:
-                c.chosen_fields.append(fld)
+            for fld in fields:
+                if fld in c.all_fields and not fld in c.chosen_fields:
+                    c.chosen_fields.append(fld)
 
         for fld in additional_fields:
             if not fld in c.chosen_fields:
@@ -314,7 +314,8 @@ class SearchController(BaseController):
             elif c.typ and 'dataset' in c.typ:
                 solr_params['q'] = c.q.encode('utf-8')+query_filter+" AND type:dataset"
             elif c.typ and 'item' in c.typ and c.q != "*:*":
-                solr_params['q'] = """aggregatedResource:"%s" %s"""%(c.q.encode('utf-8'),query_filter)
+                #solr_params['q'] = """aggregatedResource:"%s" %s"""%(c.q.encode('utf-8'),query_filter)
+                solr_params['q'] = """filename:"%s" %s"""%(c.q.encode('utf-8'),query_filter)
             else:
                 solr_params['q'] = c.q.encode('utf-8')+query_filter  
 

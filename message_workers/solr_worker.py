@@ -59,6 +59,11 @@ def gather_document(silo_name, item):
     for (_,p,o) in graph.triples((URIRef(item.uri), None, None)):
         if str(p) in solr_fields_mapping:
             field = solr_fields_mapping[str(p)]
+            if field == "aggregatedResource":
+                if '/datasets/' in o:
+                    fn = unicode(o).split('/datasets/')
+                    if len(fn) == 2 and fn[1]:
+                        document['filename'].append(unicode(fn[1]).encode("utf-8"))
             if field == "embargoedUntilDate":
                 ans = u"%sZ"%unicode(o).split('.')[0]
                 document[field].append(unicode(ans).encode("utf-8"))
