@@ -77,8 +77,8 @@ ${c.docs[doc_index]['id']}
 </a></h2>
 <table class="searchresult" summary="Search result ${cnt}">
 % if isSilo == False:
-<tr>
-<th>Silo </th><td>${c.docs[doc_index]['silo']}</td></tr>
+<tr><th>Identifier </th><td>${c.docs[doc_index]['id']}</td></tr>
+<tr><th>Silo </th><td>${c.docs[doc_index]['silo']}</td></tr>
 %     for field in c.chosen_fields:
 %       if field in c.docs[doc_index] and field not in ['silo', 'id', 'title']:
 <% 

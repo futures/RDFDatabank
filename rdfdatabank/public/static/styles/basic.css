@@ -1111,7 +1111,7 @@ div#link_to_this_search a {
     width: 100%;
 }
 
-.searchbottom {
+.searchbottom, .browsebottom {
         margin-bottom: 5px;
         margin-top: 10px;
         float: left;
@@ -1120,15 +1120,22 @@ div#link_to_this_search a {
         background: white;
         width: 100%;
 }
-.searchtop {
+.searchtop, .browsetop {
         margin-top: 5px;
         margin-bottom: 10px;
         float: left;
         font-size: 13px;
         color: #002147;
         background: white;
-        width: 50%;
         clear:left;
+}
+
+.searchtop {
+        width: 100%;
+}
+
+.browsetop {
+        width: 50%;
 }
 
 .searchleft {
