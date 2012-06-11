@@ -96,7 +96,7 @@ class StatesController(BaseController):
         state_info['params'] = {'start':start, 'rows':rows}
         items = {}
         #for item in rdfsilo.list_items():
-        for item in get_datasets(silo, start=c.start, rows=c.rows):
+        for item in get_datasets(silo, start=start, rows=rows):
             items[item] = {}
             try:
                 items[item]['embargo_info'] = is_embargoed(rdfsilo, item)
