@@ -1362,6 +1362,10 @@ font-size: 1.3em;
     font-weight: bold;
 }
 
+.dataset_info img {
+    vertical-align: middle;
+}
+
 .edit_section {
    clear: both;
    margin: 20px;
