@@ -25,7 +25,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 from rdfdatabank.model import meta, User, Group, Permission, Datasets
 from sqlalchemy.exc import IntegrityError
 #import traceback
-import logging
+#import logging
 #log = logging.getLogger(__name__)
 
 def add_silo(silo_name):
