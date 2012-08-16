@@ -15,20 +15,20 @@ dbc_go databank $@
 
 # Ask questions
 db_get databank/email
-local dbemail="$RET"
+dbemail="$RET"
 #echo "Email id is:" $dbemail
 
 db_get databank/smtpserver
-local dbsmtp="$RET"
+dbsmtp="$RET"
 
 db_get databank/store
-local dbstore="$RET"
+dbstore="$RET"
 
 db_get databank/uri
-local dburi="$RET"
+dburi="$RET"
 
 db_get databank/password
-local dbpasswd="$RET"
+dbpasswd="$RET"
 
 #Modify the ini files
 CONFIG_FILE1=/etc/default/databank/production.ini
@@ -150,7 +150,7 @@ python add_user.py admin $dbpasswd $dbemail
 
 #Configure SOLR and message workers in supervisor
 db_get databank/confsolr
-local dbconf="$RET"
+dbconf="$RET"
 installstatus=`dpkg-query -W -f='${Status}' solr-tomcat`
 if [ "$installstatus" = "install ok installed" ]
 then

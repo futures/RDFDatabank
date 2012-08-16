@@ -1,3 +1,11 @@
+databank (0.3rc4) unstable; urgency=low
+
+  * Pagination of list of data packages in silo
+  * Fixed accessability issues from user testing
+  * Implemented file, data package and silo search 
+
+ -- Anusha Ranganathan <anusha.ranganathan@ieee.org>  Thu, 16 Aug 2012 22:08:50 +0000
+
 databank (0.3rc3) unstable; urgency=low
 
   * Mod-wsgi and metadata update fixes to Sword server 
