@@ -81,7 +81,7 @@ ln -sf /etc/default/databank/sss.conf.json /var/lib/databank/sss.conf.json
 ln -sf /etc/default/databank/databank_wsgi /etc/apache2/sites-available/databank_wsgi
 ln -sf /etc/default/databank/databank_ve26_wsgi /etc/apache2/sites-available/databank_ve26_wsgi
 ln -sf /etc/default/databank/databank_ve27_wsgi /etc/apache2/sites-available/databank_ve27_wsgi
-echo "Creating directory for databank,cach and log"
+echo "Creating directory for databank,cache and log"
 #Create dirs and change ownership and permissions
 # ownership and permissions for /var/lib/databank
 chgrp -R www-data /var/lib/databank/

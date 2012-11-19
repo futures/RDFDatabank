@@ -4496,7 +4496,7 @@ def getTestSuite(select="unit"):
             , "testReferencedMetadataMerging"
             , "testReferencedMetadataMerging2"
             #, "testZ1DeleteUserMembership"
-            #, "testZ2DeleteSilo" #The file handle is being help by solr and so the silo never gets deleted
+            #, "testZ2DeleteSilo" #The file handle is being held by solr and so the silo never gets deleted
             #, "testZ3DeleteUser" 
             ],
         "component":

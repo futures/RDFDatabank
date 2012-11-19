@@ -36,7 +36,7 @@ from StringIO import StringIO
 from rdflib import StringInputSource
 from rdflib import Namespace, RDF, RDFS, URIRef, Literal, BNode
 
-from uuid import uuid4
+import uuid
 import re
 from collections import defaultdict
 
@@ -165,7 +165,10 @@ def get_embargo_values(embargoed=None, embargoed_until=None, embargo_days_from_n
 def create_new(silo, id, creator, title=None, embargoed=None, embargoed_until=None, embargo_days_from_now=None, **kw):
     item = silo.get_item(id, startversion="0")
     item.metadata['createdby'] = creator
-    item.metadata['uuid'] = uuid4().hex
+    try:
+        item.metadata['uuid'] = uuid.UUID(id).hex
+    except:
+        item.metadata['uuid'] = uuid.uuid4().hex
     item.add_namespace('oxds', "http://vocab.ox.ac.uk/dataset/schema#")
     item.add_triple(item.uri, u"rdf:type", "oxds:DataSet")
 

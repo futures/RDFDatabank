@@ -191,8 +191,8 @@ class DatasetsController(BaseController):
                 response.status_int = 400
                 response.status = "400 Bad request. Data package name not valid"
                 return "Data package name can only contain %s"%ag.naming_rule_humanized
-
             del params['id']
+
             item = create_new(c_silo, id, ident['repoze.who.userid'], **params)
             add_dataset(silo, id)
             # Broadcast change as message
@@ -411,6 +411,7 @@ class DatasetsController(BaseController):
             return render('/datasetview.html')
         elif http_method == "POST":
             code = None
+            params = request.POST
             #Create new dataset if it does not exist
             if not c_silo.exists(id):
                 if not allowable_id2(id):
@@ -418,8 +419,7 @@ class DatasetsController(BaseController):
                     response.status_int = 400
                     response.status = "400 Bad request. Data package name not valid"
                     return "Data package name can contain only the following characters - %s and has to be more than 1 character"%ag.naming_rule_humanized
-                params = {}
-                item = create_new(c_silo, id, ident['repoze.who.userid'], **params)
+                item = create_new(c_silo, id, ident['repoze.who.userid'])
                 add_dataset(silo, id)
                 code = 201
                 response.status = "201 Created"
@@ -427,7 +427,6 @@ class DatasetsController(BaseController):
                 response.headers["Content-Location"] = url(controller="datasets", action="datasetview", id=id, silo=silo)
                 response_message = "201 Created empyt data package"
             #Update embargo info
-            params = request.POST
             if params.has_key('embargoed') and params['embargoed']:
                 item = c_silo.get_item(id)
                 creator = None
