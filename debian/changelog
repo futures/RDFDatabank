@@ -1,3 +1,9 @@
+databank (1.0) unstable; urgency=low
+
+  * Integrated Sword Server, rather than install it as a separate package
+
+ -- Anusha Ranganathan <anusha.ranganathan@ieee.org>  Tue, 20 Nov 2012 14:08:50 +0000
+
 databank (0.3rc4) unstable; urgency=low
 
   * Pagination of list of data packages in silo

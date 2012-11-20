@@ -7,7 +7,7 @@ except ImportError:
 
 setup(
     name='rdfdatabank',
-    version='0.2',
+    version='1.0',
     description='',
     author='',
     author_email='',

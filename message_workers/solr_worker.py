@@ -53,7 +53,10 @@ class NoSuchSilo(Exception):
 def gather_document(silo_name, item):
     graph = item.get_graph()
     document = defaultdict(list)
-    document['uuid'].append(item.metadata['uuid'])
+    if 'uuid' in item.metadata and item.metadata['uuid']:
+        document['uuid'].append(item.metadata['uuid'])
+    else:
+        document['id'].append(item.item_id)
     document['id'].append(item.item_id)
     document['silo'].append(silo_name)
     for (_,p,o) in graph.triples((URIRef(item.uri), None, None)):
@@ -79,7 +82,7 @@ if __name__ == "__main__":
     redis_section = "redis"
     worker_section = "worker_solr"
     worker_number = sys.argv[1]
-    hours_before_commit = 1 
+    hours_before_commit = 1
     if len(sys.argv) == 3:
         if "redis_%s" % sys.argv[2] in c.sections():
             redis_section = "redis_%s" % sys.argv[2]
@@ -98,7 +101,7 @@ if __name__ == "__main__":
 
     solr = SolrConnection(c.get(worker_section, "solrurl"))
 
-    idletime = 2
+    idletime = 0.1
     commit_time = datetime.now() + timedelta(hours=hours_before_commit)
     toCommit = False
     while(True):
