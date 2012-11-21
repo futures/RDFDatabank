@@ -127,6 +127,7 @@ easy_install $py_rs
 easy_install solrpy==0.9.5
 easy_install rdflib==2.4.2
 easy_install redis==2.4.11
+easy_install -U distribute
 easy_install MySQL-python
 easy_install pylons==1.0
 easy_install lxml==2.3.4
