@@ -56,7 +56,7 @@ def gather_document(silo_name, item):
     if 'uuid' in item.metadata and item.metadata['uuid']:
         document['uuid'].append(item.metadata['uuid'])
     else:
-        document['id'].append(item.item_id)
+        document['uuid'].append(item.item_id)
     document['id'].append(item.item_id)
     document['silo'].append(silo_name)
     for (_,p,o) in graph.triples((URIRef(item.uri), None, None)):
@@ -162,7 +162,7 @@ if __name__ == "__main__":
                     continue
             else:
                 silo_metadata = g.describe_silo(silo_name)
-                solr_doc = {'id':silo_name, 'silo':silo_name, 'type':'Silo', 'uuid':uuid4().hex}
+                solr_doc = {'id':silo_name, 'silo':silo_name, 'type':'Silo', 'uuid':silo_name}
                 solr_doc['title'] = ''
                 if 'title' in silo_metadata:
                     solr_doc['title'] = silo_metadata['title']
