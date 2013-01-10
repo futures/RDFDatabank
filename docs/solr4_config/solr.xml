@@ -1,0 +1,8 @@
+<solr persistent="true" sharedLib="lib">
+	<cores adminPath="/admin/cores" defaultCoreName="databank">
+    <core name="databank" instanceDir="databank">
+      <property name="dataDir" value="/var/lib/solr/data" />
+      <property name="instanceDir" value="/var/lib/solr" />
+    </core>
+  </cores>
+</solr>
