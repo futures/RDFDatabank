@@ -102,43 +102,13 @@ sudo sh setuptools-0.6c11-py2.7.egg
 : cd /var/lib/databank/
 : source bin/activate
 
-: easy_install python-dateutil==1.5
-: easy_install pairtree==0.7.1-T
-: easy_install https://github.com/anusharanganathan/RecordSilo/raw/master/dist/RecordSilo-0.4.15-py2.7.egg
-# note warnings: simplejson/_speedups.c: In function ‘ascii_char_size’:
-simplejson/_speedups.c:489: warning: comparison is always true due to limited range of data type
-simplejson/_speedups.c: In function ‘ascii_char_size’:
-simplejson/_speedups.c:489: warning: comparison is always true due to limited range of data type
-
-: easy_install solrpy==0.9.5
-: easy_install rdflib==2.4.2
-: easy_install redis==2.4.11
-: easy_install MySQL-python
-: easy_install pylons==1.0
-: easy_install lxml==2.3.4
-: easy_install web.py
-: easy_install sqlalchemy==0.7.6
-: easy_install repoze.what-pylons
-: easy_install repoze.what-quickstart
-# Repoze.what installs repoze.who version 1.0.19 while Databank uses repoze.who 2.0a4. So delete repoze.who 1.0.19
-: rm -r /private/var/lib/databank/lib/python2.7/site-packages/repoze.who-1.0.19-py2.7.egg/
-# Pylons installs the latest version of WebOb, which expects all requests in utf-8 while earlier WebOb until 1.0.8 did't insist on utf-8.
-# So remove the latest version of WebOb, which currently is 1.2b3
-: rm -r /private/var/lib/databank/lib/python2.7/site-packages/WebOb-1.2.3-py2.7.egg
-# Install the particular version of repoze.who and WebOb needed for Databank
-: easy_install repoze.who==2.0a4 
-: easy_install webob==1.0.8
+: pip install -r requirements-dev.txt
 # Pull the sword server from source forge and copy the folder sss within sword server into databank
 : cd ~/tmp
 : curl -o sss-2.tar.gz http://sword-app.svn.sourceforge.net/viewvc/sword-app/sss/branches/sss-2/?view=tar
 : tar xzvf sss-2.tar.gz 
 : cp -r ./sss-2/sss /var/lib/databank/
 : cd /var/lib/databank
-# Installing profilers in python and pylons to obtain run time performance and other stats
-# Note: This package is OPTIONAL and is only needed in development machines. 
-# See the note below about running Pylons in debug mode (section B)
-# easy_install profiler # pkg doesn't exist, skip it
-: easy_install repoze.profile
 
 ------------------------------------------------------------------------------------------------------
 V. Customizing Databank to your environment
